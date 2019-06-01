@@ -1,0 +1,166 @@
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS macro package for Springer Computer Science proceedings;
+% Version 2.20 of 2017/10/04
+%
+\documentclass[runningheads]{llncs}
+%
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\set\{\}
+\DeclarePairedDelimiter\sguard[]
+
+\newcommand{\bang}{\,\mathop{!}\,}
+%
+% If you use the hyperref package, please uncomment the following line
+% to display URLs in blue roman font according to Springer's eBook style:
+\renewcommand\UrlFont{\color{blue}\rmfamily}
+
+\newcommand{\Zhixuan}[2][blue]{{\color{#1}\{Zhixuan: #2\}}}
+%\newcommand{\Zhixuan}[2][blue]{}
+\newcommand{\hide}[2][blue]{}
+
+\begin{document}
+%
+\title{Equational Reasoning about Pointer Programs with Separation}
+%
+%\titlerunning{Abbreviated paper title}
+% If the paper title is too long for the running head, you can set
+% an abbreviated paper title here
+%
+\author{\today}
+%\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and
+%Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
+%Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+%
+
+%\authorrunning{F. Author et al.}
+
+% First names are abbreviated in the running head.
+% If there are more than two authors, 'et al.' is used.
+%
+%\institute{Princeton University, Princeton NJ 08544, USA \and
+%Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
+%\email{lncs@springer.com}\\
+%\url{http://www.springer.com/gp/computer-science/lncs} \and
+%ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
+%\email{\{abc,lncs\}@uni-heidelberg.de}}
+%
+\maketitle              % typeset the header of the contribution
+%
+\begin{abstract}
+  %Algebraic effects provide a uniform foundation for a wide range of computational effects, including local state, where programs can not only read and write memory cells but also create new ones at runtime.
+  \Zhixuan[red]{This abstract is not very accurate. You can ignore it.}
+  The equational theories of algebraic effects are natural tools for reasoning about programs using the effects, and some of the theories are proved to be complete, including the one of local state---the effect of mutable memory cells with dynamic allocation.
+  Although being complete, reasoning about large programs with only a small number of equational axioms can sometimes be cumbersome and unscalable, as exposed in a case study of using the theory of local state to equationally reason about the Schorr-Waite traversal algorithm.
+  Motivated by the recurring patterns in the case study, this papers proposes a conservative extension to the theory of local state called \emph{separation guards}, which is used to assert the disjointness of memory cells and allows local equational reasoning as in separation logic.
+
+\keywords{Equational Reasoning \and Effect systems \and Program transformation \and Pointer programs \and Algebraic effects}
+\end{abstract}
+%
+%
+%
+\section{Introduction}
+\hide{Bullets:
+\begin{enumerate}
+  \item Algebraic effects provide a uniform way to model computational effects and the defining equational theories of algebraic effects are natural tools to reason about programs using algebraic effects---Plotkin and Pretnar's logic.
+  Furthermore, some equational theories are showed to be complete, including the one of local state.
+
+  \item Although being complete, doing equational reasoning with only basic equational axioms may be unscalable.
+  For example, it is unpractical if we must always expand the definitions of two programs $f$ and $g$ to the level of basic operations to prove their algebraic properties such as commutativity $f; g = g;f$.
+
+  \item A widely used solution is to track possible operations in a program with an \emph{effect system}.
+    Exploiting the algebraic properties of operations performed by a program, many program transformation can be validated~\cite{Kammar2012}.
+    For example, $f$ and $g$ commute if every operation possibly performed by $f$ commutes with every operation in $g$.
+
+  \item However, for the effect of local state, existing region-based effect systems fail to precisely track which regions may be accessed by a program when a cell storing a reference value may point to---store references of---different regions at different stages of execution.
+    This problem emerges in the equational reasoning about the Schorr-Waite traversal algorithm which traverses a pointer-based binary tree with only constant space by reusing the memory cells of the tree to control the recursion.
+    During the traversal, the children pointers of a node of the tree may be modified to store references in different regions at different stages of execution.
+    However, when those cells are read, existing region systems lose track of which region the stored reference precisely is in, disabling program transformations that we would like to use.
+
+  \item To address this problem, we propose an alternative way to track which memory cells may be accessed by a program: instead of checking that a program only accesses a statically determined region, we check a program only accesses all cells reachable from a given pointer, which intuitively form a region but is not statically determined and whose cells may be different if the points-to structure of memory cells are changed at runtime.
+
+    We also introduce a complementary construct of \emph{separation guard}, which is an operation checking some pointers or their reachable closures are disjoint, otherwise the guard fails and stops the execution of the program.
+    With separation guard and our effect system, we can formulate some transformations of pointer-manipulating programs beyond the expressiveness of previous region systems.
+    Using these transformations, we can equationally prove the correctness of the Schorr-Waite traversal algorithm (on binary trees) quite straightforwardly.
+\end{enumerate}
+}
+
+Plotkin and Power's algebraic effects~\cite{Plotkin2002,Plotkin2004} and their handlers~\cite{Plotkin2013,Pretnar2010} provide a uniform foundation for a wide range of computational effects by defining an effect as an algebraic theory---a set of operations and equational axioms on them.
+The approach has proved to be successful because of its composability of effects and clear separation between syntax and semantics.
+Furthermore, the equations defining an algebraic effect are also natural tools for equational reasoning about programs using the effect, and are extended to a rich equational logic~\cite{Pretnar2010,Plotkin2008}.
+The equations of some algebraic effects are also proved to be (Hilbert-Post) complete, including the effects of global and local state~\cite{Staton2010}.
+
+
+However, if one is limited to use only equational axioms on basic operations and must always expand the definition of a program to the level of basic operations, this style of reasoning will not be scalable.
+A widely-studied solution is to use an \emph{effect system} to track possible operations used by a program and use this information to derive equations (i.e.\ transformations) between programs.
+For example, if two programs $f$ and $g$ only invoke operations in sets $\epsilon_1$ and $\epsilon_2$ respectively and every operation in $\epsilon_1$ commutes with every operation in $\epsilon_2$, then $f$ and $g$ commute:
+\[x \leftarrow f; y \leftarrow g; k \quad = \quad y \leftarrow g; x \leftarrow f; k\]
+The pioneering work by Lucassen and Gifford~\cite{Lucassen1988} introduced an effect system to track memory usage in a program by statically partitioning the memory into \emph{regions} and used that information to assist scheduling parallel programs.
+%The idea of using regions to statically track memory usage is
+Benton et al.~\cite{Benton2006,Benton2007,Benton2009} and Birkedal et al.~\cite{Birkedal2016} gave relational semantics of such region systems of increasing complexity and verified some program equations based on them.
+Kammar and Plotkin~\cite{Kammar2012} presented a more general account for effect systems based on algebraic effects and studied many effect-dependent program equations.
+In particular, they also used the Gifford-style region-based approach to manage memory usage.
+
+There is always a balance between expressiveness and complexity.
+Despite its simplicity and wide applicability, tracking memory usage by \emph{static} regions is not always effective for equational reasoning about some pointer-manipulating programs, especially those manipulating recursive data structures.
+It is often the case that we want to prove operations on one node of a data structure is irrelevant to operations on the rest of the structure; thus a static region system requires that we annotate the node in a region different from that of the rest of the data structure.
+If this happens to every node (e.g.\ in a recursive function), each node of the data structure needs to have its own region, and thus the abstraction provided by regions collapses: regions should abstract disjoint memory cells, not memory cells themselves.
+In Section~\ref{sec:prob}, we show a concrete example of equational reasoning about a tree traversal program and why a static region system does not work.
+
+
+%A notable example is the Schorr-Waite traversal algorithm~\cite{Schorr1967}, which traverses a pointer-based binary tree using only constant space by reusing the memory cells of the tree itself to control the recursion.
+%During the traversal, the memory cells of the nodes of the tree may be modified to store references to different regions at different stages of execution.
+%However, when those cells are read, existing effect systems fail to track to which region the stored reference precisely is, disabling program transformations that we would like to use.
+
+The core of the problem is the assumption that every memory cell statically belongs to one region, but when the logical structure of memory cells is dynamic (e.g.\ when a linked list is split into two lists), we also want regions to be dynamic to reflect the structure of the memory (e.g.\ the region of the list is also split into two regions).
+To mitigate this problem, we propose an alternative way to track memory usage.
+Instead of assigning a fixed region label to a memory reference, we always take a region to be either (i) a single memory cell or (ii) the \emph{current} reachable closure from a memory cell.
+By `current', we emphasise that it is the cells reachable from that cell at a specific point of execution at runtime.
+For example, the judgement
+\begin{equation}\label{equ:tvs}
+l : \mathit{ListPtr} \; a \vdash t\; l : \mathbf{1} \bang \set{\mathit{get}_{\mathit{r}(l)}}
+\end{equation}
+asserts the program $t\;l$ only reads the linked list starting from $l$, where the type $\mathit{ListPtr}\;a = \mathit{Nil} \; | \; \mathit{Ptr}\;(\mathit{Ref}\; (a,\,\mathit{ListPtr} \; a))$ is either $\mathit{Nil}$ marking the end of the list or a reference to a cell storing a payload of type $a$ and a $\mathit{ListPtr}$ to the next node of the list.
+The cells linked from $l$ intuitively form a region but it is only dynamically determined, and therefore may consist of different cells if the successor field (of type $\mathit{ListPtr}\;a$) stored in $l$ is modified when $l$ is not $\mathit{Nil}$.
+
+We also introduce a complementary construct called \emph{separation guard}, which intuitively is an effect operation checking some pointers or their reachable closures are disjoint, otherwise stopping the execution of the program.
+For example,
+\[l : \mathit{ListPtr}\;a, l_2 : \mathit{Ref}\; (a,\,\mathit{ListPtr} \; a) \vdash \sguard{\mathit{r}(l) * l_2} : \mathbf{1}\]
+can be understood as a program checking the cell $l_2$ is not any node of linked list $l$.
+With separation guards and our effect system, we can formulate some program equations beyond the expressiveness of previous region systems.
+For example, given judgement~(\ref{equ:tvs}), then
+\[ \sguard{\mathit{r}(l) * l_2};\mathit{put} \; l_2 \; v; t\; l \quad = \quad \sguard{\mathit{r}(l) * l_2}; t\; l; \mathit{put} \; l_2 \; v  \]
+says that if cell $l_2$ is not a node of linked list $l$, then modification to $l_2$ can be swapped with $t\;l$, which only accesses list $l$.
+In Section~\ref{sec:case}, we demonstrate using these transformations, we can equationally prove the correctness of the Schorr-Waite traversal algorithm (on binary trees)~\cite{Schorr1967} quite straightforwardly.
+
+\Zhixuan{Here will be a paragraph summarising contributions and the paper structure.}
+\section{Limitation of Existing Region Systems}\label{sec:prob}
+
+\section{Dynamic Region System}
+\subsection{Preliminaries: the Language and Logic}
+\Zhixuan[red]{To write: this section fixes a programming language of algebraic effects and briefly describes an equational logic for it following \cite{Plotkin2008,Pretnar2010}.}
+
+\subsection{Effect System as Logic Predicates}
+
+\section{Separation Guard}
+
+\section{Case Study: Equational Reasoning about Schorr-Waite Traversal}\label{sec:case}
+
+\section{Related Work}
+Algebraic effects:~\cite{Plotkin2002}
+
+Effect systems:~\cite{Lucassen1988,Talpin1992,Marino2009}
+
+\section{Conclusion}
+%
+% ---- Bibliography ----
+%
+% BibTeX users should specify bibliography style 'splncs04'.
+% References will then be sorted and formatted in the correct style.
+%
+\bibliographystyle{splncs04}
+\bibliography{sep.bib}
+
+\end{document}
