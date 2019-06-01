@@ -30,8 +30,10 @@
 \newcommand{\judgeOneDef}[1]{\judgeThree{\Gamma}{\Psi}{#1}}
 \newcommand{\judgeTwoDef}[2]{\judgeThree{\Gamma}{#1}{#2}}
 \newcommand{\preEq}[3]{#1 \langle\; #2 \eqA #3 \;\rangle}
-\newcommand{\eqC}{=_{\texttt{CBPV}}}
-\newcommand{\eqA}{=_{\texttt{Alg}}}
+\newcommand{\eqC}{=}
+\newcommand{\eqA}{=}
+%\newcommand{\eqC}{=_{\texttt{CBPV}}}
+%\newcommand{\eqA}{=_{\texttt{Alg}}}
 \newcommand{\typing}[3]{#1 \vdash #2 : #3}
 %\newcommand{\rcl}[1]{#1^{\rightarrow}}
 \newcommand{\rcl}[1]{\mathbf{rc}\;#1}
@@ -431,12 +433,10 @@ The inference rules of this logic include:
 \end{enumerate}
 In this paper, we will only use the first three kinds of rules.
 
-A difference from the logic defined in~\cite{Plotkin2008,Pretnar2010} is that we distinguish equivalences derived only from CBPV rules (written as $\eqC$) and those derived from both CBPV rules and effect theories (written as $\eqA$).
-This is preferable for our purpose because we do not want to regard |{v <- get l; put l v}| and |return ()| as the same because they invoke different operations.
+%A difference from the logic defined in~\cite{Plotkin2008,Pretnar2010} is that we distinguish equivalences derived only from CBPV rules (written as $\eqC$) and those derived from both CBPV rules and effect theories (written as $\eqA$).
+%This is preferable for our purpose because we do not want to regard |{v <- get l; put l v}| and |return ()| as the same because they invoke different operations.
 
-\subsection{Effect System as Logic Predicates}
-%\Zhixuan{This subsection defines the well-formedness and semantics of predicates $\effect{t}{\epsilon}$: $t$ is a (possibly) infinite operation tree consisting only operations in $\epsilon$.}
-
+\subsection{Effect System as Logic Predicates \Zhixuan[red]{New version}}
 Unlike existing type-and-effect systems, our mutable region system is defined as logic predicates on computation terms in the logic.
 Let |op| range over possible effect operations in the language.
 We extend the term of the logic:
@@ -454,33 +454,71 @@ The new term is well-formed when
 \and
   \inferrule{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}} \\ \typing{\Gamma}{v}{|ListPtr D|}}{\typing{\Gamma}{\effect{t}{\epsilon, o_{\rcl{v}}}}{\mathbf{form}}}\;(o \in \set{|get|,\;|put|})
 \end{mathpar}
+Although $\epsilon$ is formally a list of comma-separated operations, we will regard it as a set and thus use set operations like inclusion and minus on it.
 
-The intended meaning of the formula $\effect{t}{\epsilon}$ is that the computation $t$ only invokes operations in $\epsilon$.
-Specially, $|get|_v$ and $|put|_v$ in $\epsilon$ mean reading and writing the reference $v : |Ref D|$, and $|get|_{\rcl{v}}$ and $|put|_{\rcl{v}}$ mean reading and writing all the cells linked from $v$ of type $|ListPtr D|$.
+\begin{example}
+  Let $\Gamma$ be $\set{l : |Ref D|,\ r : |Ref (D, ListPtr D)|}$, 
+  \[\typing{\Gamma}{\effect{|{(a, n) <- get r; put (l, a)}|}{\set{|put|_{l},\ |get|_{\rcl{|(Ptr r)|}}}}}{\mathbf{form}}\]
+  is derivable.
+\end{example}
 
-The semantics of $\sembrk{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}}}$ (abbreviated as $\sembrk{\effect{t}{\epsilon}}$ below) is a subset of $\sembrk{\Gamma}$ that is the \emph{least}-fixed-point solution of the following mutual-recursive equations.
-\Zhixuan[red]{No, this definition is wrong.
-A plausible definition: for all memory configuration (in which regions in $\epsilon$ are fintie), running $t$ (with get/put handled and other operations un-handled) only operates corresponding cells (and terminates).}
-\begin{align*}
-  &\sembrk{\effect{t}{\epsilon}} &= \set{ \gamma \in \sembrk{\Gamma} \mid \exists & \typing{\Gamma}{v}{A}.\ \sembrk{t}(\gamma) = \sembrk{|return v|}(\gamma)} \\
+Our effect predicate is defined only on first-order computations.
+But we can work with higher order functions by using quantification in the logic. 
+For example, if $\typing{\Gamma}{t}{|ListPtr D| \rightarrow \mathbf{F}A}$
+\[\judgeThree{\Gamma}{}{\forall (l : |ListPtr D|).\ \effect{|t l|}{\set{|get|_{\rcl{l}}}}}\]
+is well-formed and it expresses that function |t| only reads |l| when it is applied to list |l|.
+
+\Zhixuan[red]{Standardly, we then give a semantics of the logic formula $\effect{t}{\epsilon}$ and prove the inference rules below are sound, but I found it difficult to give a natural semantics. On the other hand, our ultimate goal is using these effect predicates to express some program transformations. So for our purposes, it is safe enough if we can prove the inference rules of effect predicates lead to sound transformations. So let's go without semantics of effect predicates? }
+
+\Zhixuan{(Note for myself) An idea for the semantics: $\sembrk{\effect{t}{|get|_{\rcl{l}}}}$ means $\sembrk{|{traverse l; t}|}$ has a tree that ... }
+
+%\subsection{Effect System as Logic Predicates}
+%%\Zhixuan{This subsection defines the well-formedness and semantics of predicates $\effect{t}{\epsilon}$: $t$ is a (possibly) infinite operation tree consisting only operations in $\epsilon$.}
 %
-  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|op : B -> (udl(C))| \in \epsilon,\ \typing{\Gamma}{v}{B},\ \typing{(\Gamma, c : C)}{k}{\mathbf{F}A}.\\
-  &&&\sembrk{t}(\gamma) = \sembrk{|c <- op v; k|}(\gamma) \wedge \forall v_c \in \sembrk{C}.\ (\gamma, v_c) \in \sembrk{\effect{k}{\epsilon}}} \\
+%Unlike existing type-and-effect systems, our mutable region system is defined as logic predicates on computation terms in the logic.
+%Let |op| range over possible effect operations in the language.
+%We extend the term of the logic:
+%\begin{align*}
+%  \phi &::= \ldots \mid \effect{t}{\epsilon} \\
+%  \epsilon &::= \emptyset \mid \epsilon,|op| \mid \epsilon,|get|_{\rcl{v}} \mid \epsilon,|put|_{\rcl{v}} \mid \epsilon,|get|_{v} \mid \epsilon,|put|_{v}
+%\end{align*}
+%The new term is well-formed when
+%\begin{mathpar}
+%\inferrule{\typing{\Gamma}{t}{\mathbf{F}{A}}}{\typing{\Gamma}{\effect{t}{\cdot}}{\mathbf{form}}}
+%\and
+%  \inferrule{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}}}{\typing{\Gamma}{\effect{t}{\epsilon, |op|}}{\mathbf{form}}}
+%\and
+%  \inferrule{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}} \\ \typing{\Gamma}{v}{|Ref D|}}{\typing{\Gamma}{\effect{t}{\epsilon, o_v}}{\mathbf{form}}}\;(o \in \set{|get|,\;|put|})
+%\and
+%  \inferrule{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}} \\ \typing{\Gamma}{v}{|ListPtr D|}}{\typing{\Gamma}{\effect{t}{\epsilon, o_{\rcl{v}}}}{\mathbf{form}}}\;(o \in \set{|get|,\;|put|})
+%\end{mathpar}
 %
-  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|get|_v \in \epsilon,\ \typing{(\Gamma, c : D)}{k}{\mathbf{F}A}.\\
-  &&&\sembrk{t}(\gamma) = \sembrk{|c <- get v; k|}(\gamma) \wedge \forall v_c \in \sembrk{D}.\ (\gamma, v_c) \in \sembrk{\effect{k}{\epsilon}}} \\
+%The intended meaning of the formula $\effect{t}{\epsilon}$ is that the computation $t$ only invokes operations in $\epsilon$.
+%Specially, $|get|_v$ and $|put|_v$ in $\epsilon$ mean reading and writing the reference $v : |Ref D|$, and $|get|_{\rcl{v}}$ and $|put|_{\rcl{v}}$ mean reading and writing all the cells linked from $v$ of type $|ListPtr D|$.
 %
-  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|put|_v \in \epsilon,\ \typing{\Gamma}{d}{D},\ \typing{\Gamma}{k}{\mathbf{F}A}.\\
-  &&&\sembrk{t}(\gamma) = \sembrk{|put (v,d); k|}(\gamma) \wedge \gamma \in \sembrk{\effect{k}{\epsilon}}} \\
-%
-  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|get|_{\rcl{v}} \in \epsilon, \text{if } \sembrk{v}(\gamma) = \sembrk{|Nil|} \text{ then } \gamma \in \sembrk{\effect{t}{\epsilon \setminus \set{|get|_{\rcl{v}}, |put|_{\rcl{v}}}}} \\
-  &&& \quad \text{otherwise } \exists\; l'.\  \sembrk{t}(\gamma) = \sembrk{|(d,n) <- get l'; k|}(\gamma) \\
-  &&& \quad\wedge \forall v_d, v_n.\ (\gamma, v_d, v_n) \in \sembrk{\effect{k}{\epsilon[\rcl{n}/\rcl{v}] \cup \epsilon[l'/\rcl{v}]}}} \\
-%
-  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|put|_{\rcl{v}} \in \epsilon, \text{if } \sembrk{v}(\gamma) = \sembrk{|Nil|} \text{ then } \gamma \in \sembrk{\effect{t}{\epsilon \setminus \set{|get|_{\rcl{v}}, |put|_{\rcl{v}}}}} \\
-  &&& \quad \text{otherwise } \exists\; l',\; d,\; k.\  \sembrk{t}(\gamma) = \sembrk{|put (l',d); k|}(\gamma) \\
-  &&& \quad\wedge \gamma \in \sembrk{\effect{k}{\epsilon[l'/\rcl{v}]}}}
-\end{align*}
+%The semantics of $\sembrk{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}}}$ (abbreviated as $\sembrk{\effect{t}{\epsilon}}$ below) is a subset of $\sembrk{\Gamma}$ that is the \emph{least}-fixed-point solution of the following mutual-recursive equations.
+%\Zhixuan[red]{No, this definition is wrong.
+%A plausible definition: for all memory configuration (in which regions in $\epsilon$ are fintie), running $t$ (with get/put handled and other operations un-handled) only operates corresponding cells (and terminates).}
+%\begin{align*}
+%  &\sembrk{\effect{t}{\epsilon}} &= \set{ \gamma \in \sembrk{\Gamma} \mid \exists & \typing{\Gamma}{v}{A}.\ \sembrk{t}(\gamma) = \sembrk{|return v|}(\gamma)} \\
+%%
+%  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|op : B -> (udl(C))| \in \epsilon,\ \typing{\Gamma}{v}{B},\ \typing{(\Gamma, c : C)}{k}{\mathbf{F}A}.\\
+%  &&&\sembrk{t}(\gamma) = \sembrk{|c <- op v; k|}(\gamma) \wedge \forall v_c \in \sembrk{C}.\ (\gamma, v_c) \in \sembrk{\effect{k}{\epsilon}}} \\
+%%
+%  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|get|_v \in \epsilon,\ \typing{(\Gamma, c : D)}{k}{\mathbf{F}A}.\\
+%  &&&\sembrk{t}(\gamma) = \sembrk{|c <- get v; k|}(\gamma) \wedge \forall v_c \in \sembrk{D}.\ (\gamma, v_c) \in \sembrk{\effect{k}{\epsilon}}} \\
+%%
+%  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|put|_v \in \epsilon,\ \typing{\Gamma}{d}{D},\ \typing{\Gamma}{k}{\mathbf{F}A}.\\
+%  &&&\sembrk{t}(\gamma) = \sembrk{|put (v,d); k|}(\gamma) \wedge \gamma \in \sembrk{\effect{k}{\epsilon}}} \\
+%%
+%  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|get|_{\rcl{v}} \in \epsilon, \text{if } \sembrk{v}(\gamma) = \sembrk{|Nil|} \text{ then } \gamma \in \sembrk{\effect{t}{\epsilon \setminus \set{|get|_{\rcl{v}}, |put|_{\rcl{v}}}}} \\
+%  &&& \quad \text{otherwise } \exists\; l'.\  \sembrk{t}(\gamma) = \sembrk{|(d,n) <- get l'; k|}(\gamma) \\
+%  &&& \quad\wedge \forall v_d, v_n.\ (\gamma, v_d, v_n) \in \sembrk{\effect{k}{\epsilon[\rcl{n}/\rcl{v}] \cup \epsilon[l'/\rcl{v}]}}} \\
+%%
+%  &                              &\cup \set{ \gamma \in \sembrk{\Gamma} \mid \exists &|put|_{\rcl{v}} \in \epsilon, \text{if } \sembrk{v}(\gamma) = \sembrk{|Nil|} \text{ then } \gamma \in \sembrk{\effect{t}{\epsilon \setminus \set{|get|_{\rcl{v}}, |put|_{\rcl{v}}}}} \\
+%  &&& \quad \text{otherwise } \exists\; l',\; d,\; k.\  \sembrk{t}(\gamma) = \sembrk{|put (l',d); k|}(\gamma) \\
+%  &&& \quad\wedge \gamma \in \sembrk{\effect{k}{\epsilon[l'/\rcl{v}]}}}
+%\end{align*}
 \subsection{Inference Rules}
 \Zhixuan{It sounds worthwhile to to de-couple the inferences of terminance and possible operations }
 %
@@ -529,6 +567,32 @@ It is worth mentioning that the rule \textsc{R-Op} requires $\effect{k}{\epsilon
 If $\epsilon$ contains $|get|_{\rcl{v}}$ or $|put|_{\rcl{v}}$, the program can read or write the cells linked from $|v : ListPtr D|$.
 When $|v = Nil|$, the program get no cells to access from $\rcl{v}$.
 When $|v = Ptr v'|$, the program can read or write the cell |v'|, and if it reads it by |(a, n) <- get v'|, its allowed operation on $\rcl{v}$ is inherited by $\rcl{n}$ and $v'$, which is achieved by substituting $\rcl{n}$ for $\rcl{v}$ and $v'$ for $\rcl{v}$ in $\epsilon$ in the inference rules below.
+
+
+>>>>>>>>>>>>>>>>>>
+
+\begin{mathpar}
+  \inferrule{  \judgeThree{\Gamma}{\Psi}{\effect{k}{ \epsilon \setminus \set{ |get|_x, |put|_x} }} }{ \judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon[|Nil| / x]}}} \; (|get|_x \in \epsilon \text{ or } |put|_x \in \epsilon)
+  \and
+  \inferrule{  \judgeThree{\Gamma, a, n}{\Psi}{\effect{k}{ \epsilon[r/x] \cup \epsilon[\rcl{n}/x]}} }{ \judgeThree{\Gamma}{\Psi}{\effect{|{(a, n) <- get r; k}|}{\epsilon[\rcl{|(Ptr r)|} / x]}}} \; (|get|_x \in \epsilon)
+  \and
+  \inferrule{ \judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[r / x]}}}{\judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[\rcl{|(Ptr r)|} / x]}}} \; (|put|_x \in \epsilon)
+  \and
+  \inferrule{\judgeThree{\Gamma}{\Psi}{\effect{t_1}{\epsilon}} \\ \judgeThree{\Gamma, x}{\Psi}{\effect{t_2}{\epsilon}}}{\judgeThree{\Gamma}{\Psi}{\effect{|{x <- t1; t2}|}{\epsilon}}}
+\end{mathpar}
+
+
+Under side condition ${|get|_{\rcl{v}}} \in \epsilon$,
+\begin{mathpar}
+  \inferrule{ \judgeThree{\Gamma,\ v}{\Psi, |v = Nil|}{\effect{t}{\epsilon}} \\ 
+      \judgeThree{\Gamma,\ v,\ r}{\Psi,\ |v = Ptr r|}{|t = {(a, n) <- get r; k}|} \\
+      \judgeThree{\Gamma, v, r, a, n}{\Psi,\ |v = Ptr r|,\ \effect{t[n/v]}{\epsilon[n/v]} }{\effect{k}{\epsilon[n/v] \cup \epsilon[r/\rcl{v}]}} }
+    { \judgeThree{\Gamma,\ v : |ListPtr D|}{\Psi}{\effect{t}{\epsilon}} }
+\end{mathpar}
+
+
+
+<<<<<<<<<<<<<<<<<
 
 \vspace{8pt}
 If ${|get|_{\rcl{v}}} \in \epsilon$
