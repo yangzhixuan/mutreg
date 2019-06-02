@@ -36,7 +36,7 @@
 %\newcommand{\eqA}{=_{\texttt{Alg}}}
 \newcommand{\typing}[3]{#1 \vdash #2 : #3}
 %\newcommand{\rcl}[1]{#1^{\rightarrow}}
-\newcommand{\rcl}[1]{\mathbf{rc}\;#1}
+\newcommand{\rcl}[1]{{\mathbf{rc}\;#1}}
 \newcommand{\hint}[1]{{\color{olive}\text{[- #1 -]}}}
 
 \newcommand{\labelcode}[1]{
@@ -99,7 +99,7 @@
 %format _dots = "\ldots"
 \begin{document}
 %
-\title{Equational Reasoning about Pointer Programs with Separation}
+\title{A Mutable Region System for Equational Reasoning about Pointer Algorithms}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -356,8 +356,8 @@ type |ListPtr A| is isomorphic to
     &\text{Computation terms: } &t ::=\ & |return v| \mid |{x <- t1; t2}| \mid |match v as {(x1, x2) -> t}| \\
     && \mid\ & |match v as {Nil -> t1, Ptr x -> t2}| \\
     && \mid\ & |match v as {inj1 x1 -> t1, inj2 x2 -> t2}| \\
-    && \mid\ & |\x : A . t| \mid |t v| \mid |force v| \mid |op v| \mid \mu x : \mathbf{U} \underline{A}.\ t \\
-    &\text{Operations: } & |op| ::=\ & |fail| \mid |get| \mid |put| \mid |new| \mid \ldots 
+    && \mid\ & |\x : A . t| \mid |t v| \mid |force v| \mid |op v| \mid \mu x : \underline{A}.\ t \\
+    &\text{Operations: } & |op| ::=\ & |fail| \mid \Omega \mid |get| \mid |put| \mid |new| \mid \ldots 
   \end{align*}
   \caption{Syntax of the language.}\label{lang-syn}
 \end{figure}
@@ -370,7 +370,7 @@ type |ListPtr A| is isomorphic to
 
 
 
-We assume that the language includes the effect of failure and \emph{local state}~\cite{Staton2010}.
+We assume that the language includes the effect of failure (|fail|), non-divergence ($\Omega$) and \emph{local state}~\cite{Staton2010}.
 Failure has one nullary operation |fail| and no equations.
 Local state has the following three operations:
 \begin{align*}
@@ -519,7 +519,8 @@ is well-formed and it expresses that function |t| only reads |l| when it is appl
 %  &&& \quad\wedge \gamma \in \sembrk{\effect{k}{\epsilon[l'/\rcl{v}]}}}
 %\end{align*}
 \subsection{Inference Rules}
-\Zhixuan{It sounds worthwhile to to de-couple the inferences of terminance and possible operations }
+An advantage of tracking effects in the equational logic is that we only need to design inference rules for effects-related language constructs---|return|, sequencing and operation application.
+Other language constructs like case-analysis are handled by the equational logic as we will see in the example below.
 %
 % The following is a largest-fixed-point version, but I switched to least-fixed-point.
 %\begin{mathpar}
@@ -544,86 +545,75 @@ is well-formed and it expresses that function |t| only reads |l| when it is appl
 %where $|k n|\texttt{ preserves}$ abbreviates 
 %\[(\forall x.\;\pi(x) \rightarrow \effect{x}{\set{\mathit{get}_{\rcl{l}}} \cup \epsilon}) \rightarrow \effect{k}{\set{|get l'|, \mathit{get}_{\rcl{n}}} \cup \epsilon[l'/\rcl{l}] \cup \epsilon[\rcl{n}/\rcl{l}]}\]
 %
-We have the following rules to infer the possible operations used by a program.
-\begin{mathpar}
-  \inferrule{ }{\judgeThree{\Gamma}{\Psi}{\effect{|return x|}{\emptyset}}} \textsc{ R-Pure}
-  \and
-  \inferrule{\judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon}} \\ \epsilon \subseteq \epsilon'}{\judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon'}}} \textsc{ R-Sub}
-  \and
-  \inferrule{\judgeOneDef{t \eqC t' \;\wedge\; \effect{t'}{\epsilon}}}{\judgeOneDef{\effect{t}{\epsilon}}} \textsc{ R-Eq}
-\end{mathpar}
-and for any ${|op : A -> udl(B)| \in \epsilon}$ that is not $|get|/|put|_{\rcl{v}}$,
-\begin{mathpar}
-  \inferrule{\judgeThree{\Gamma, a : B}{\Psi}{\effect{|k|}{\epsilon}}}{\judgeOneDef{\effect{|(a <- op v; k)|}{\epsilon}}} \;  \textsc{ R-Op}
-\end{mathpar}
-\textsc{R-Sub} says if $t$ only operates on $\epsilon$ then it also operates on any larger $\epsilon'$.
-\textsc{R-Eq} says the predicate $\effect{\cdot}{\epsilon}$ is compatible with CBPV-equivalence.
-For example, since programs $|(if True then t1 else t2)| \eqC |t1|$, if $\effect{t_1}{\epsilon}$, we also have $\effect{|if True then t1 else t2|}{\epsilon}$.
+Our inference rules are:
+\begin{itemize}
+  \item two structural rules
+  \begin{mathpar}
+    \inferrule{\judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon}} \\ \epsilon \subseteq \epsilon'}{\judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon'}}} \textsc{ R-Sub}
+    \and
+    \inferrule{\judgeOneDef{t \eqC t' \;\wedge\; \effect{t'}{\epsilon}}}{\judgeOneDef{\effect{t}{\epsilon}}} \textsc{ R-Eq}
+  \end{mathpar}
+  \item rules for |return| and sequencing
+    \begin{mathpar}
+      \inferrule{ }{\judgeThree{x : A}{ }{\effect{|return x|}{\emptyset}}} \textsc{ R-Pure}
+      \and
+      \inferrule{\judgeThree{\Gamma}{\Psi}{\effect{t_1}{\epsilon}} \\ \judgeThree{\Gamma, x : A}{\Psi}{\effect{t_2}{\epsilon}}}{\judgeThree{\Gamma}{\Psi}{\effect{|{x <- t1; t2}|}{\epsilon}}} \textsc{ R-Seq}
+    \end{mathpar}
+  \item rules for effect operations, for any operation of type $A \rightarrow \underline{B}$ in the language,
+    \[\inferrule{ }{\judgeThree{v : |A|}{ }{ \effect{|op v|}{\set{op}}}} \textsc{ R-Op}\]
+    and specially for $|get|_l$ and $|put|_l$ (Formally, they are not operation of the language so these rules are needed)
+    \begin{mathpar}
+      \inferrule{ }{\judgeThree{l : |Ref D|}{ }{\effect{|get l|}{\set{|get|_l}}}}
+      \and
+      \inferrule{ }{\judgeThree{l : |Ref D|,\;a : D}{ }{\effect{|put (l, a)|}{\set{|put|_l}}}}
+    \end{mathpar}
+  \item rules for $|get|_\rcl{l}$ and $|put|_\rcl{l}$
+    \begin{mathpar}
+      %\inferrule{  \judgeThree{\Gamma}{\Psi}{\effect{k}{ \epsilon \setminus \set{ |get|_x, |put|_x} }} }{ \judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon[|Nil| / x]}}} \; (|get|_x \in \epsilon \text{ or } |put|_x \in \epsilon)
+      \inferrule{  \judgeThree{\Gamma}{\Psi}{\effect{k}{ \epsilon \setminus \set{ |get|_\rcl{|Nil|}, |put|_\rcl{|Nil|}} }} }{ \judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon}}} \textsc{ R-Nil}
+      \and
+      \inferrule{  \judgeThree{\Gamma, a, n}{\Psi}{\effect{k}{ \epsilon[l/x] \cup \epsilon[\rcl{n}/x]}} }{ \judgeThree{\Gamma}{\Psi}{\effect{|{(a, n) <- get l; k}|}{\epsilon[\rcl{|(Ptr l)|} / x]}}} \; (|get|_x \in \epsilon) \textsc{ R-GetRc}
+      \and
+      \inferrule{ \judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[l / x]}}}{\judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[\rcl{|(Ptr l)|} / x]}}} \; (|put|_x \in \epsilon) \textsc{ R-PutRc}
+    \end{mathpar}
+    These rules deserve some explanation: The rule \textsc{R-Nil} means that $|get|_\rcl{|Nil|}$ and $|put|_\rcl{|Nil|}$ cannot be used by the program;
+    the rule \textsc{R-GetRc} means that if a program has the permission to read the list from $l$, it can read the cell $l$ and its permission on $\rcl{(|Ptr l|)}$ is split into the same permission on cell $l$ and the rest of the list (i.e.\ $\rcl{n}$);
+    \begin{example}
+      By \textsc{R-GetRc}, if $\judgeThree{\Gamma, a, n}{}{\effect{k}{\set{|get|_l, |put|_l, |get|_\rcl{n}, |put|_\rcl{n}}}}$ is derivable, then 
+      \[\judgeThree{\Gamma}{}{\effect{|{(a, n) <- get l; k}|}{\set{|get|_\rcl{|(Ptr l)|}, |put|_\rcl{|(Ptr l)|}}}}\]
+      is derivable.
+    \end{example}
+    the rule \textsc{R-PutRc} says that if a program has the permission to write the list from $l$, then it has the permission to write the cell $l$ itself.
+    This rule seems not very useful, but it reflects the fact that even if a program can write $\rcl{|Ptr l|}$, if it cannot read $l$, its accessible cells are restricted to $l$ only.
 
-\textsc{R-Op} deals with the case where the program invokes an operation in $\epsilon$.
-It is worth mentioning that the rule \textsc{R-Op} requires $\effect{k}{\epsilon}$ for \emph{arbitrary} $a : B$ as the premise, even the effect theory for |op| may constrain the possible values for |a| returned by |op|.
-
-If $\epsilon$ contains $|get|_{\rcl{v}}$ or $|put|_{\rcl{v}}$, the program can read or write the cells linked from $|v : ListPtr D|$.
-When $|v = Nil|$, the program get no cells to access from $\rcl{v}$.
-When $|v = Ptr v'|$, the program can read or write the cell |v'|, and if it reads it by |(a, n) <- get v'|, its allowed operation on $\rcl{v}$ is inherited by $\rcl{n}$ and $v'$, which is achieved by substituting $\rcl{n}$ for $\rcl{v}$ and $v'$ for $\rcl{v}$ in $\epsilon$ in the inference rules below.
-
-
->>>>>>>>>>>>>>>>>>
-
-\begin{mathpar}
-  \inferrule{  \judgeThree{\Gamma}{\Psi}{\effect{k}{ \epsilon \setminus \set{ |get|_x, |put|_x} }} }{ \judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon[|Nil| / x]}}} \; (|get|_x \in \epsilon \text{ or } |put|_x \in \epsilon)
-  \and
-  \inferrule{  \judgeThree{\Gamma, a, n}{\Psi}{\effect{k}{ \epsilon[r/x] \cup \epsilon[\rcl{n}/x]}} }{ \judgeThree{\Gamma}{\Psi}{\effect{|{(a, n) <- get r; k}|}{\epsilon[\rcl{|(Ptr r)|} / x]}}} \; (|get|_x \in \epsilon)
-  \and
-  \inferrule{ \judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[r / x]}}}{\judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[\rcl{|(Ptr r)|} / x]}}} \; (|put|_x \in \epsilon)
-  \and
-  \inferrule{\judgeThree{\Gamma}{\Psi}{\effect{t_1}{\epsilon}} \\ \judgeThree{\Gamma, x}{\Psi}{\effect{t_2}{\epsilon}}}{\judgeThree{\Gamma}{\Psi}{\effect{|{x <- t1; t2}|}{\epsilon}}}
-\end{mathpar}
-
-
-Under side condition ${|get|_{\rcl{v}}} \in \epsilon$,
-\begin{mathpar}
-  \inferrule{ \judgeThree{\Gamma,\ v}{\Psi, |v = Nil|}{\effect{t}{\epsilon}} \\ 
-      \judgeThree{\Gamma,\ v,\ r}{\Psi,\ |v = Ptr r|}{|t = {(a, n) <- get r; k}|} \\
-      \judgeThree{\Gamma, v, r, a, n}{\Psi,\ |v = Ptr r|,\ \effect{t[n/v]}{\epsilon[n/v]} }{\effect{k}{\epsilon[n/v] \cup \epsilon[r/\rcl{v}]}} }
-    { \judgeThree{\Gamma,\ v : |ListPtr D|}{\Psi}{\effect{t}{\epsilon}} }
-\end{mathpar}
-
-
-
-<<<<<<<<<<<<<<<<<
-
-\vspace{8pt}
-If ${|get|_{\rcl{v}}} \in \epsilon$
-\vspace{-12pt}
-\begin{mathpar}
-  \inferrule{\judgeOneDef{\effect{|t Nil|}{\epsilon \setminus \set{|get|_{\rcl{v}},\ |put|_{\rcl{v}}}}} \\ 
-             \judgeThree{\Gamma, v'}{\Psi}{|t (Ptr v')| \eqC |{(a, n) <- get v'; k}|} \\
-             \judgeThree{\Gamma, v', a, n}{\Psi,\ \effect{|t n|}{\epsilon[\rcl{n}/\rcl{v}]}}{\effect{k}{\epsilon[\rcl{n}/\rcl{v}] \cup \epsilon[v'/\rcl{v}]}}}
-             {\judgeOneDef{\effect{|t v|}{\epsilon}}}
-\end{mathpar}
-
-If $|put|_{\rcl{v}} \in \epsilon$
-\vspace{-12pt}
-\begin{mathpar}
-  \inferrule{ \judgeOneDef{\effect{|t Nil|}{\epsilon \setminus \set{|get|_{\rcl{v}},\ |put|_{\rcl{v}}}}} \\
-             \judgeOneDef{|t (Ptr v')| \eqC |{put v' c; k}|} \\
-             \judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[v'/\rcl{v}]}}}
-            {\judgeOneDef{\effect{|t v|}{\epsilon}}} 
-\end{mathpar}
-The inference rule for $|get|_{\rcl{v}}$ also encodes the inductive principle for (finite) linked list by adding $\effect{|t n|}{\epsilon[\rcl{n}/\rcl{l}]}$ to the assumption for $k$.
-\Zhixuan[red]{It is obviously a very restrictive way because it restricts the recursive structure of |t| to be aligned with one list $\rcl{v}$.
-As a consequence, this rule cannot deal with $\effect{|merge p q|}{\set{|get|_{\rcl{p}}, |put|_{\rcl{p}}, |get|_{\rcl{q}}, |put|_{\rcl{q}}}}$, the program merging two lists.
-
-But I have no good idea how to work around.
-Perhaps we need to upgrade predicates $(\effect{\cdot}{\epsilon})$---currently only on $\mathbf{F}A$---to higher order functions?}
-
-\begin{theorem}[Soundness]
-  If $\judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon}}$, then $\sembrk{\Psi} \subseteq \sembrk{\effect{t}{\epsilon}}$.
-\end{theorem}
-\begin{proof}
-\Zhixuan{To add. Hopefully it will not be very difficult.}
-\end{proof}
+  \item Finally, we introduce a rule that may not be valid in more general settings but is safe in our context because it assumes all lists in memory are finite.
+    The rule is, under side condition ${|get|_{\rcl{v}}} \in \epsilon$,
+    \begin{mathpar}
+      \inferrule{ \judgeThree{\Gamma,\ v}{\Psi, |v = Nil|}{\effect{t}{\epsilon}} \\ 
+          \judgeThree{\Gamma,\ v,\ r}{\Psi,\ |v = Ptr r|}{|t = {(a, n) <- get r; k}|} \\
+          \judgeThree{\Gamma, v, r, a, n}{\Psi,\ |v = Ptr r|,\ \effect{t[n/v]}{\epsilon[n/v]} }{\effect{k}{\epsilon[n/v] \cup \epsilon[r/\rcl{v}]}} }
+        { \judgeThree{\Gamma,\ v : |ListPtr D|}{\Psi}{\effect{t}{\epsilon}} }
+    \end{mathpar}
+    Without this rule, a recursive program defined with $\mu$ can only satisfy $\effect{\cdot}{\epsilon}$ if $\Omega \in \epsilon$ (See Scott-induction in Chapter 9 of paper~\cite{Pretnar2010}).
+    This rule allows a program that is a structural recursion along some linked list to satisfy predicate $\effect{\cdot}{\epsilon}$ without including $\Omega$ in $\epsilon$, as if it is not a recursive program.
+    \begin{example}
+      Without this rule, we can only derive $\effect{|foldrl f e l|}{\set{get_\rcl{l}, \Omega}}$ using Scott-induction.
+      With this, we can derive
+      \begin{equation*}
+        \inferrule{\inferrule{|foldrl f e Nil = return ()| \\ \effect{|return ()|}{\set{get_\rcl{l}}}}{\judgeThree{f, e, l}{l = |Nil|}{\effect{|foldrl f e Nil|}{\set{get_\rcl{l}}}}} \\ \textcircled{1} \\ \textcircled{2}
+              }{\judgeThree{f, e, l}{ }{\effect{|foldrl f e l|}{\set{get_\rcl{l}}}}}
+      \end{equation*}
+      where $\textcircled{1}$ is
+      \begin{gather*}
+        \judgeThree{f, e, l, r}{l = |Ptr r|}{|foldrl f e l| = |{(a, n) <- get r; K}| } \\
+        K =_{\mathtt{def}} |{b <- foldrl f e n; return f a b}|
+      \end{gather*}
+      and $\textcircled{2}$ is
+      \begin{align*}
+        \inferrule{ \cdots }{ \judgeThree{f, e, l, r, a, n}{l = |Ptr r|, \effect{|foldrl f e n|}{\set{|get|_\rcl{n}}}}{\effect{K}{\set{|get|_r, |get|_\rcl{n}}}}}
+      \end{align*}
+    \end{example}
+\end{itemize}
 
 \section{Separation Guards}
 \Zhixuan[red]{Given definition and semantics of separation guards.}
