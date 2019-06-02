@@ -462,8 +462,7 @@ Although $\epsilon$ is formally a list of comma-separated operations, we will re
   is derivable.
 \end{example}
 
-Our effect predicate is defined only on first-order computations.
-But we can work with higher order functions by using quantification in the logic. 
+Although our effect predicate is defined only on first-order computations, we can work with higher order functions by using quantification in the logic.
 For example, if $\typing{\Gamma}{t}{|ListPtr D| \rightarrow \mathbf{F}A}$
 \[\judgeThree{\Gamma}{}{\forall (l : |ListPtr D|).\ \effect{|t l|}{\set{|get|_{\rcl{l}}}}}\]
 is well-formed and it expresses that function |t| only reads |l| when it is applied to list |l|.
