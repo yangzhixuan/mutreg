@@ -2,12 +2,19 @@
 % LLNCS macro package for Springer Computer Science proceedings;
 % Version 2.20 of 2017/10/04
 %
-\documentclass[runningheads]{llncs}
+
+%\documentclass[runningheads]{llncs}
+\documentclass{sokendai_thesis}
+
 %
+\usepackage[sort]{natbib}
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{stmaryrd}
+%%%%% SOKENDAI Thesis
+\let\openbox\undefined \usepackage{amsthm} % newtxmath in the preamble already defined openbox
+%%%%%%%%%%%%%%
 \usepackage{mathtools}
 \DeclarePairedDelimiter\set\{\}
 \DeclarePairedDelimiter\sguard[]
@@ -58,6 +65,8 @@
 
 %format udl(x) = "\underline{" x "}"
 %format (udl(x)) = "\underline{" x "}"
+%format op1 = "\mathit{op}_1"
+%format op2 = "\mathit{op}_2"
 %format t1 = "t_1"
 %format t2 = "t_2"
 %format v1 = "v_1"
@@ -97,47 +106,92 @@
 %format foldrlsw = "\mathit{foldrl}_{\mathit{sw}}"
 %format _eqa = "\eqA"
 %format _dots = "\ldots"
-\begin{document}
-%
+
+
+%%%%%%%%%%%%
+%SOKENDAI Thesis
+
+
+
 \title{A Mutable Region System for Equational Reasoning about Pointer Algorithms}
-%
-%\titlerunning{Abbreviated paper title}
-% If the paper title is too long for the running head, you can set
-% an abbreviated paper title here
-%
-\author{\today}
-%\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and
-%Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
-%Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
-%
+\author{Zhixuan Yang}
+\date{June 2019}
+\crest{SOKENDAI.pdf} % comment out if you don't have a crest.
+%\keywords{Latex Template, Sokendai, PhD Thesis} % for PDF meta-info
 
-%\authorrunning{F. Author et al.}
 
-% First names are abbreviated in the running head.
-% If there are more than two authors, 'et al.' is used.
+
+
+%%%%%%%%%%%
+
+
+
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%% LNCS Front matter%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%      %
+%%%%%%      \title{A Mutable Region System for Equational Reasoning about Pointer Algorithms}
+%%%%%%      %
+%%%%%%      %\titlerunning{Abbreviated paper title}
+%%%%%%      % If the paper title is too long for the running head, you can set
+%%%%%%      % an abbreviated paper title here
+%%%%%%      %
+%%%%%%      \author{\today}
+%%%%%%      %\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and
+%%%%%%      %Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
+%%%%%%      %Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+%%%%%%      %
+%%%%%%      
+%%%%%%      %\authorrunning{F. Author et al.}
+%%%%%%      
+%%%%%%      % First names are abbreviated in the running head.
+%%%%%%      % If there are more than two authors, 'et al.' is used.
+%%%%%%      %
+%%%%%%      %\institute{Princeton University, Princeton NJ 08544, USA \and
+%%%%%%      %Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
+%%%%%%      %\email{lncs@springer.com}\\
+%%%%%%      %\url{http://www.springer.com/gp/computer-science/lncs} \and
+%%%%%%      %ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
+%%%%%%      %\email{\{abc,lncs\}@uni-heidelberg.de}}
+%%%%%%      %
+%%%%%%      \maketitle              % typeset the header of the contribution
+%%%%%%      %
+%%%%%%      \begin{abstract}
+%%%%%%        %Algebraic effects provide a uniform foundation for a wide range of computational effects, including local state, where programs can not only read and write memory cells but also create new ones at runtime.
+%%%%%%        \Zhixuan[red]{This abstract is not very accurate. You can ignore it.}
+%%%%%%        The equational theories of algebraic effects are natural tools for reasoning about programs using the effects, and some of the theories are proved to be complete, including the one of local state---the effect of mutable memory cells with dynamic allocation.
+%%%%%%        Although being complete, reasoning about large programs with only a small number of equational axioms can sometimes be cumbersome and unscalable, as exposed in a case study of using the theory of local state to equationally reason about the Schorr-Waite traversal algorithm.
+%%%%%%        Motivated by the recurring patterns in the case study, this papers proposes a conservative extension to the theory of local state called \emph{separation guards}, which is used to assert the disjointness of memory cells and allows local equational reasoning as in separation logic.
+%%%%%%      
+%%%%%%      \keywords{Equational Reasoning \and Effect systems \and Program transformation \and Pointer programs \and Algebraic effects}
+%%%%%%      \end{abstract}
 %
-%\institute{Princeton University, Princeton NJ 08544, USA \and
-%Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
-%\email{lncs@springer.com}\\
-%\url{http://www.springer.com/gp/computer-science/lncs} \and
-%ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
-%\email{\{abc,lncs\}@uni-heidelberg.de}}
 %
-\maketitle              % typeset the header of the contribution
 %
-\begin{abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%5 SOKENDAI Thesis Front matter
+
+\frontmatter
+\maketitle
+
+\chapter*{Abstract}
   %Algebraic effects provide a uniform foundation for a wide range of computational effects, including local state, where programs can not only read and write memory cells but also create new ones at runtime.
   \Zhixuan[red]{This abstract is not very accurate. You can ignore it.}
   The equational theories of algebraic effects are natural tools for reasoning about programs using the effects, and some of the theories are proved to be complete, including the one of local state---the effect of mutable memory cells with dynamic allocation.
   Although being complete, reasoning about large programs with only a small number of equational axioms can sometimes be cumbersome and unscalable, as exposed in a case study of using the theory of local state to equationally reason about the Schorr-Waite traversal algorithm.
   Motivated by the recurring patterns in the case study, this papers proposes a conservative extension to the theory of local state called \emph{separation guards}, which is used to assert the disjointness of memory cells and allows local equational reasoning as in separation logic.
+  
+  \tableofcontents
+  \listoffigures
+\mainmatter
 
-\keywords{Equational Reasoning \and Effect systems \and Program transformation \and Pointer programs \and Algebraic effects}
-\end{abstract}
-%
-%
-%
-\section{Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\chapter{Introduction}
 \hide{Bullets:
 \begin{enumerate}
   \item Algebraic effects provide a uniform way to model computational effects and the defining equational theories of algebraic effects are natural tools to reason about programs using algebraic effects---Plotkin and Pretnar's logic.
@@ -212,15 +266,15 @@ In Section~\ref{sec:case}, we demonstrate using these transformations, we can eq
 
 \Zhixuan{Here will be a paragraph summarising contributions and the paper structure.}
 
-\section{Limitation of Existing Region Systems}\label{sec:prob}
-This section we show the limitation of static region systems with a practical example of equational reasoning: proving the straightforward recursive implementation of |foldr| for linked lists is semantically equivalent to an optimised implementation using only constant space.
+\chapter{Limitation of Existing Region Systems}\label{sec:prob}
+This chapter we show the limitation of static region systems with a practical example of equational reasoning: proving the straightforward recursive implementation of |foldr| for linked lists is semantically equivalent to an optimised implementation using only constant space.
 The straightforward implementation is not tail-recursive and thus it uses space linear to the length of the list, whereas the optimised version cleverly eliminate the space cost by reusing the space of the linked list itself to store the information needed to control the recursion and restore the linked list after the process.
 This optimisation is essentially the Schorr-Waite algorithm~\cite{Schorr1967} adapted to linked lists, whose correctness is far from obvious and has been used as a test for many approaches of reasoning about pointer-manipulating programs \Zhixuan[red]{Citations}.
 
 In the following, we start with an attempt to an algebraic proof of the correctness of this optimisation---transforming the optimised implementation to the straightforward one with equational axioms of the programming language and its effect operations.
 From this attempt, we can see the limitation of static region systems: we want the region partitioning to match the logical structure of data in memory, but when the structure is mutable, static region systems do not allow region partitioning to be mutable to reflect the change of the underlying structure.
 
-\subsection{Motivating Example: Constant-time |foldr| for Linked Lists}
+\section{Motivating Example: Constant-time |foldr| for Linked Lists}
 The straightforward implementation of folding (from the tail side) a linked list is simply
 \begin{code}
 foldrl : (A -> B -> B) -> B -> ListPtr A -> _F(B)
@@ -254,7 +308,7 @@ The following program implements this idea with an extra function argument to ju
 |foldrlsw| is in fact a special case of the Schorr-Waite traversal algorithm which traverses a graph whose vertices have at most 2 outgoing edges using only 1 bit for each stack frame to control the recursion.
 The Schorr-Waite algorithm can be easily generalised to traverse a graph whose out-degree is bounded by $k$ using $\log k$ bits for each stack frame, and the above program is the case when $k = 1$ and the list is assumed to be not cyclic.
 
-\subsection{Verifying |foldrlsw|: First Attempt}
+\section{Verifying |foldrlsw|: First Attempt}
 Let us try to prove the optimisation above is correct, in the sense that |foldrlsw| can be transformed to |foldrl| by a series of applications of equational axioms on programs that we postulate, including those characterising properties of the language constructs like |case| and function application, and those characterising the effectful operations |get| and |put|.
 
 To prove by induction, it is easy to see that we need to prove a strengthened equality:
@@ -324,14 +378,14 @@ While as we have seen in the example above, in different steps of our reasoning,
 it is not only because we need region partitioning to match the logic structure of memory cells which is mutable---as in the example above, a node of a list is modified to points to something else and thus should no longer be in the region of the list.
 Even when all data are immutable, we may still want a more flexible notion of regions---in one part of a program, we probably reason at the level of lists and thus we want all the nodes of a list to be in the same region; while in another part of the same program, we may want to reason at the level of nodes, then we want different nodes of a list in different regions.
 
-\section{Mutable Region System}
+\chapter{Mutable Region System}
 Our observations in the last section suggest us to develop a more flexible region system.
 Our idea is to let the points-to structure of memory cells \emph{determine} regions: a region is either a single memory cell or all the cells reachable from one cell along the points-to structure of cells.
 We found it is simpler to implement this idea in a logic system rather than a type system: we introduce effect predicates $\effect{(\cdot)}{\epsilon} $ on programs of computation types where $\epsilon$ is a list of effect operations in the language and two `virtual' operations $|get|_r$ and $|put|_r$ where $r$ is a region in the above sense.
 The semantics of $\effect{t}{\epsilon}$ is that program $t$ only invokes the operations in $\epsilon$.
 Inference rules for effect predicates are introduced.
 
-\subsection{Preliminaries: the Language and Logic}
+\section{Preliminaries: the Language and Logic}
 %\Zhixuan[red]{To write: this section fixes a programming language of algebraic effects and briefly describes an equational logic for it following \cite{Plotkin2008,Pretnar2010}.But we need to distinguish two equalities: $\eqC$ and $=_{\mathit{AE}}$.}
 
 As the basis of discussion, we fix a small programming language with algebraic effects based on Levy's call-by-push-value calculus~\cite{Levy2012call}. 
@@ -397,7 +451,7 @@ and (d) the following \emph{separation law}: for any |D|,
           {  False -> t1
              True -> t2 }}
 \end{code}
-\labelcodetag{New-Disj}{law:disj}
+\labelcodetag{Ax-Sep}{law:disj}
 \vspace{-1cm}
 \end{center}
 which is a special case of the axiom schema $\text{B}3_n$ in~\cite{Staton2010} but is sufficient for our purposes.
@@ -436,7 +490,7 @@ In this paper, we will only use the first three kinds of rules.
 %A difference from the logic defined in~\cite{Plotkin2008,Pretnar2010} is that we distinguish equivalences derived only from CBPV rules (written as $\eqC$) and those derived from both CBPV rules and effect theories (written as $\eqA$).
 %This is preferable for our purpose because we do not want to regard |{v <- get l; put l v}| and |return ()| as the same because they invoke different operations.
 
-\subsection{Effect System as Logic Predicates \Zhixuan[red]{New version}}
+\section{Effect System as Logic Predicates}
 Unlike existing type-and-effect systems, our mutable region system is defined as logic predicates on computation terms in the logic.
 Let |op| range over possible effect operations in the language.
 We extend the term of the logic:
@@ -471,8 +525,8 @@ is well-formed and it expresses that function |t| only reads |l| when it is appl
 
 \Zhixuan{(Note for myself) An idea for the semantics: $\sembrk{\effect{t}{|get|_{\rcl{l}}}}$ means $\sembrk{|{traverse l; t}|}$ has a tree that ... }
 
-%\subsection{Effect System as Logic Predicates}
-%%\Zhixuan{This subsection defines the well-formedness and semantics of predicates $\effect{t}{\epsilon}$: $t$ is a (possibly) infinite operation tree consisting only operations in $\epsilon$.}
+%\section{Effect System as Logic Predicates}
+%%\Zhixuan{This section defines the well-formedness and semantics of predicates $\effect{t}{\epsilon}$: $t$ is a (possibly) infinite operation tree consisting only operations in $\epsilon$.}
 %
 %Unlike existing type-and-effect systems, our mutable region system is defined as logic predicates on computation terms in the logic.
 %Let |op| range over possible effect operations in the language.
@@ -518,7 +572,7 @@ is well-formed and it expresses that function |t| only reads |l| when it is appl
 %  &&& \quad \text{otherwise } \exists\; l',\; d,\; k.\  \sembrk{t}(\gamma) = \sembrk{|put (l',d); k|}(\gamma) \\
 %  &&& \quad\wedge \gamma \in \sembrk{\effect{k}{\epsilon[l'/\rcl{v}]}}}
 %\end{align*}
-\subsection{Inference Rules}
+\section{Inference Rules}
 An advantage of tracking effects in the equational logic is that we only need to design inference rules for effects-related language constructs---|return|, sequencing and operation application.
 Other language constructs like case-analysis are handled by the equational logic as we will see in the example below.
 %
@@ -615,15 +669,35 @@ Our inference rules are:
     \end{example}
 \end{itemize}
 
-\section{Separation Guards}
-\Zhixuan[red]{Given definition and semantics of separation guards.}
 
-Our region predicates defined above can be used to show a program only operates on certain memory cells determined by some variables, but this information is useful only when we know the cells that two programs respectively operates on are disjoint.
+An obvious difference of our effect predicates from existing type-and-effect system is that we only have inference rules for effect related language constructs, because other language constructs can be handled by \textsc{R-Eq} and corresponding elimination rules for the construct of the logic.
+\begin{example}
+  Letting |P| denote |case b of {True -> op1; False -> op2}|, we can derive
+  \begin{align*}
+    \inferrule{
+    \inferrule{
+      \textcircled{1}\\
+      \textcircled{2}}
+    {\judgeThree{b : |Bool|}{|b = False| \vee |b = True|}{\effect{|P|}{\set{|op1|, |op2|}}}}}
+  { \judgeThree{b : Bool}{}{\effect{|P|}{\set{|op1|, |op2|}}}} (\textsc{ ExM-Bool})
+  \end{align*}
+  where \textsc{ExM-Bool} is the rule in the logic saying that $b : |Bool|$ is either |True| or |False|, $\textcircled{1}$ is
+  \begin{equation*}
+    \inferrule{\judgeThree{b : |Bool|}{b = |True|}{P = |op1|} \\ \inferrule{\judgeThree{}{}{\effect{|op1|}{\set{|op1|}}}}{\judgeThree{b : |Bool|}{b = |True|}{\effect{|op1|}{\set{|op1|, |op2|}}}} }{\judgeThree{b : |Bool|}{|b = False|}{\effect{|P|}{\set{|op1|, |op2|}}}}
+  \end{equation*}
+  and similarly $\textcircled{2}$ is
+  \begin{equation*}
+    \inferrule{\judgeThree{b : |Bool|}{b = |False|}{P = |op2|} \\ \inferrule{\judgeThree{}{}{\effect{|op2|}{\set{|op2|}}}}{\judgeThree{b : |Bool|}{b = |False|}{\effect{|op2|}{\set{|op1|, |op2|}}}} }{\judgeThree{b : |Bool|}{|b = False|}{\effect{|P|}{\set{|op1|, |op2|}}}}
+  \end{equation*}
+\end{example}
+
+\chapter{Separation Guards}
+Our effect predicates defined above can be used to show a program only operates on certain memory cells determined by some variables, but this information is useful only when we know the cells that two programs respectively operates on are disjoint.
 Ultimately, disjointness comes from the \ref{law:disj} axiom of |new| saying that references returned by distinct |new| invocations are different.
 But this axiom is too primitive for practical use.
-In this section, we introduce \emph{separation guards} for tracking disjointness more easily at a higher level.
+In this chapter, we introduce \emph{separation guards} for tracking disjointness more easily at a higher level.
 
-Following the notation of separation logic~\cite{Reynolds2002}, we write $\phi = l_1 * l_2 * \cdots * l_n$ to denote that cells described by $l_i$ are dijoint.
+Following the notation of separation logic~\cite{Reynolds2002}, we write $\phi = l_1 * l_2 * \cdots * l_n$ to denote that cells described by $l_i$ are disjoint.
 Here $l_i$ can be either a value of type |Ref D| or |_r(v)| for a value |v| of type |ListPtr D|.
 A separation guard $\sguard{\phi}$ is a computation of type $\mathbf{F}|Unit|$:
 \begin{code}
@@ -648,7 +722,7 @@ For example, if |t| is a program traversing list |l : ListPtr D|, it is (algebra
 The equality holds whenever |l| is finite or not: when |l| is infinite, |sg(_r(l))| diverges or fails.
 In both cases, it is a left-zero of the sequencing operator ``$ \;;\; $'' and thus the equality holds.
 
-\subsection{Inference Rules}\label{sec:sepinf}
+\section{Inference Rules}\label{sec:sepinf}
 Although separation guards can be defined as a concrete program as above, we intend them to be used abstractly with the following inference rules.
 Define $\preEq{c}{a}{b}$ to be $(c;a) \eqA (c;b)$.
 \begin{mathpar}
@@ -687,7 +761,7 @@ The inference rules above are sound.
   \Zhixuan{It'll be a large verifying proof.}
 \end{proof}
 
-\subsection{Effect-dependent Transformations}
+\section{Effect-dependent Transformations}
 A frame rule:
 \[
 \inferrule{\judgeOneDef{\effect{t_1}{\overline{\phi_1}}} \\ \judgeOneDef{\preEq{\sguard{\phi_1}}{t_1}{t_2}}}{\judgeOneDef{\preEq{\sguard{\phi_1 * \phi_2}}{t_1}{(t_2;\sguard{\phi_2})}}}
@@ -702,21 +776,23 @@ Commutativity lemma
 \Zhixuan{Proving the above two rules using the inference rules of separation guards and effect predicate.}
 \end{proof}
 
-\section{Case Study: Equational Reasoning about Schorr-Waite Traversal}\label{sec:case}
+\chapter{Case Study: Equational Reasoning about Schorr-Waite Traversal}\label{sec:case}
 
-\section{Related Work}
+\chapter{Related Work}
 Algebraic effects:~\cite{Plotkin2002}
 
 Effect systems:~\cite{Lucassen1988,Talpin1992,Marino2009}
 
-\section{Conclusion}
+\chapter{Conclusion}
 %
 % ---- Bibliography ----
 %
 % BibTeX users should specify bibliography style 'splncs04'.
 % References will then be sorted and formatted in the correct style.
 %
-\bibliographystyle{splncs04}
+%\bibliographystyle{splncs04}
+%\bibliographystyle{plain}
+\bibliographystyle{ACM-Reference-Format}
 \bibliography{sep.bib}
 
 \end{document}
