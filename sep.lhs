@@ -287,7 +287,6 @@ From this attempt, we can see the limitation of static region systems: we want t
 
 \section{Motivating Example: Constant-space |foldr| for Linked Lists}
 The straightforward implementation of folding (from the tail side) a linked list is simply
-\Zhixuan{name}
 \begin{code}
 foldrl : (A -> B -> B) -> B -> ListPtr A -> _F B
 foldrl f e v =  case v of 
@@ -295,7 +294,7 @@ foldrl f e v =  case v of
                   Ptr r  -> {  (a, n) <- get r; b <- foldrl f e n;
                                return (f a b) }
 \end{code}
-where |_F B| is the type of computations of |B| values.
+where |_F B| is the type of computations of |B| values and the letter $l$ in |foldrl| means linked lists.
 The program is recursively defined but not tail-recursive, therefore a compiler is likely to use a stack to implement the recursion.
 At runtime, the stack has one frame for each recursive call storing local arguments and variables so that they can be restored later when the recursion returns.
 If we want to minimise the space cost of the stack, we may notice that most local variables are not necessary to be saved in the stack: arguments |f| and |e| are not changed throughout the recursion, and local variables |a|, |n| and |r| can be obtained from |v|.
@@ -439,11 +438,10 @@ type |ListPtr A| is isomorphic to
 We assume that the language includes the effect of failure (|fail|), non-divergence ($\Omega$) and \emph{local state}~\cite{Staton2010}.
 Failure has one nullary operation |fail| and no equations.
 Local state has the following three operations:
-\Zhixuan{typo}
 \begin{align*}
-  |get|_D &: |Ref D -> (udl(D))| \\
-  |put|_D &: |(Ref D) ** D -> (udl(Unit))| \\
-  |new|_D &: |D -> (udl(Ref D))|
+  |get|_D &: |Ref D -> _F D| \\
+  |put|_D &: |Ref D ** D -> _F Unit| \\
+  |new|_D &: |D -> _F (Ref D)|
 \end{align*}
 and they satisfy (a) the three equations in (\ref{laws:gp}) and
 \[ |{x <- get r; y <- get r; K}| = |{x <- get r; {-"K[x/y]"-}}| \]
