@@ -7,6 +7,7 @@
 \documentclass{sokendai_thesis}
 
 %
+
 \usepackage[sort]{natbib}
 \usepackage{graphicx}
 \usepackage{xcolor}
@@ -105,6 +106,7 @@
 %format eps = "\epsilon"
 %format phieps = "\phi_\epsilon"
 %format union = "\cup"
+%format intersect = "\cap"
 %format eset = "\emptyset"
 %format sg(x) = "\sguard{" x "}"
 %format sgP(x) = "\sguardP{" x "}"
@@ -265,7 +267,7 @@ The cells linked from $l$ form a region $\rcl{l}$ but it is only dynamically det
 
 We also introduce a complementary construct called \emph{separation guards}, which are effectful programs checking some pointers or their reachable closures are disjoint, otherwise stopping the execution of the program.
 For example,
-\[l : \mathit{ListPtr}\;a,\ l_2 : \mathit{Ref}\; (a,\,\mathit{ListPtr} \; a) \vdash \sguard{\rcl{l} * l_2} : \mathbf{1}\]
+\[l : \mathit{ListPtr}\;a,\ l_2 : \mathit{Ref}\; (a \times \mathit{ListPtr} \; a) \vdash \sguard{\rcl{l} * l_2} : \mathbf{1}\]
 can be understood as a program checking the cell $l_2$ is not any node of linked list $l$.
 With separation guards and our effect system, we can formulate some program equations beyond the expressiveness of previous region systems.
 For example, given judgement~(\ref{equ:tvs}), then
@@ -378,7 +380,7 @@ Hence if we want to derive Equation~\ref{equ:com} with a region system, we can a
 Unfortunately, this strategy does not quite work for two reasons:
 First, since the argument above for |r| also applies to |n| and all their successors, what we finally need is one region $\epsilon_i$ for every node $r_i$ of a linked list.
 This is unfavourable because the abstraction of regions collapses---we are forced to say that |foldrl f e n| only accesses list |n|'s first node, second node, etc, instead of only one region containing all the nodes of |n|.
-The second problem happens in the type system: Now that the reference type is indexed by regions, the type of the $i$-th cell of a linked list may be upgraded to $|Ref|\ \epsilon_{i}\ (a,\,|ListPtr|_{i+1}\ a)$.
+The second problem happens in the type system: Now that the reference type is indexed by regions, the type of the $i$-th cell of a linked list may be upgraded to $|Ref|\ \epsilon_{i}\ (a \times |ListPtr|_{i+1}\ a)$.
 But this type signature prevents the second field of this cell pointing to anything but its successor, making programs changing the list structure like |foldrlsw| untypable.
 This problem cannot be fixed by simply change the type of the second field to be the type of references to arbitrary region, because we will lose track of the region information necessary for our equational reasoning when reading from that field.
 
@@ -520,7 +522,7 @@ The new term is well-formed when
 Although $\epsilon$ is formally a list of comma-separated operations, we will regard it as a set and thus use set operations like inclusion and minus on it.
 
 \begin{example}
-  Let $\Gamma$ be $\set{l : |Ref D|,\ r : |Ref (D, ListPtr D)|}$, 
+  Let $\Gamma$ be $\set{l : |Ref D|,\ r : |Ref (D ** ListPtr D)|}$, 
   \[\typing{\Gamma}{\effect{|{(a, n) <- get r; put (l, a)}|}{\set{|put|_{l},\ |get|_{\rcl{|(Ptr r)|}}}}}{\mathbf{form}}\]
   is derivable.
 \end{example}
@@ -709,54 +711,64 @@ An obvious difference of our effect predicates from existing type-and-effect sys
 \Zhixuan{An example demonstrating the assumption of disjointness of regions by these rules.}
 
 \section{Semantics}\label{subsec:sem}
-\Zhixuan{I will write this important section on Wednesday!}
-
 \Zhixuan{And by Thursday, I will write the equivalence section!}
 
 \Zhixuan{And on Friday, I will clean the paper from the beginning}
 
 \Zhixuan{And on Sat and Sun, I will write the related work and conclusion}
 
-Now let us formalise the semantics of effect predicate $\effect{t}{\epsilon}$---when regions mentioned in $\epsilon$ are disjoint, $t$ is a computation only using the operations allowed by $\epsilon$ finite many times.
-Recall that the semantics of $t : \mathbf{F}A$ is an equivalence class of trees whose nodes are operation symbols and leaves are $\sembrk{A}$-values.
-The trees in $\sembrk{A}$ are equal in the sense that any one of them can be rewritten to another by the equations of the effect theory~\cite{Bauer2018}.
-Therefore if we can define a denotational semantics $\sembrk{\epsilon}$ for $\epsilon$, presumably to be a set of operations available to $t$, then $\sembrk{\effect{t}{\epsilon}}$ can be defined to be the set of $\gamma \in \sembrk{\Gamma}$ such that $\sembrk{t}_\gamma$ has some element whose operations is a subset of $\sembrk{\epsilon}_\gamma$.
+Now let us formalise our intuitive semantics of effect predicate $\effect{t}{\epsilon}$: when regions mentioned in $\epsilon$ are disjoint and have finite cells, $t$ is a computation only using the operations contained in $\epsilon$ and $t$ is also finite.
+Recall that the semantics of $t : \mathbf{F}A$ is an equivalence class of trees whose internal nodes are labeled with operation symbols and leaves are labeled with $|return v|$ for some $v \in \sembrk{A}$.
+Trees in $\sembrk{t}$ are equal in the sense that anyone of them can be rewritten to another by the equations of the effect theory~\cite{Bauer2018}.
+Therefore if we can define a denotational semantics $\sembrk{\epsilon}$, presumably to be the set of operations available to $t$, then $\sembrk{\effect{t}{\epsilon}}$ can be defined to mean that $\sembrk{t}$ has some element $T$ whose operations is a subset of $\sembrk{\epsilon}$ and $T$ is a well-founded tree.
 
-However, how to interpret $\epsilon$ in the framework of algebraic effect is not straightforward.
-For $|op|$, $|get|_l$ and $|put|_l$ in $\epsilon$, they can be easily interpreted by |op|, $|get|_{\sembrk{l}}$ and $|put|_{\sembrk{l}}$.
-For $|get|_{\rcl{l}}$ (and $|put|_{\rcl{l}}$), we want to interpret it as a set of operations $\set{|get|_{\sembrk{l}}, |get|_{r_1}, |get|_{r_2}, \dots}$ where ${\sembrk{l}}$ points to $r_1$ and $r_1$ points to $r_2$ in the memory, etc.
-But now we get into trouble because in the semantic world of algebraic effects, we do not have anything explicitly representing the memory so that we do not know what $r_1$, $r_2$, \dots are.
+However, how to interpret $\epsilon$ in the framework of algebraic effects is not straightforward.
+For $|op|$, $|get|_l$ and $|put|_l$ in $\epsilon$, they can be easily interpreted by corresponding operations |op|, $|get|_{\sembrk{l}}$ and $|put|_{\sembrk{l}}$.
+For $|get|_{\rcl{l}}$ (and $|put|_{\rcl{l}}$), we want to interpret it as a set of operations $\set{|get|_{\sembrk{l}}, |get|_{r_1}, |get|_{r_2}, \dots}$ where ${\sembrk{l}}$ points to $r_1$, $r_1$ points to $r_2$ in the memory, etc.
+However, in the semantics of algebraic effects, there is no explicit representation for the memory so that we do not immediately know what $r_1$, $r_2$, \dots are.
 (For comparison, the semantics of $t$ in other approaches is usually a function $|Mem -> (sem(A), Mem)|$ which has an explicit |Mem|.)
 
-This problem may be tackled following the coalgebraic treatment of top-level effects~\cite{PlotkinPower2008}, but here we adopt a simple workaround:
-Although we do not have an explicit representation of memory to work with, we do have an operation |get| to probe the memory---if $|get r|$ returns $v$, we know in the memory cell $r$ currently stores value $v$.
-Hence if $\sguardP{\rcl{v}}$ is a program traversing linked list $v$ and returns a set of the references to the nodes of the list, then we can interpret $\effect{t}{\set{|get|_{\rcl{v}}}}$ in this way: in program $|{r <- sgP( _r( v ) ); t}|$, $t$ only reads the references in $r$.
-And as we mentioned in \autoref{subsec:inf}, predicate $\effect{t}{\set{|get|_{r_1}, |put|_{r_2}}}$ implicitly assumes that $r_1$ and $r_2$ are disjoint, so to interpret this predicate, we want $\sguardP{r_1 * r_2}$ not only returns the references in $r_1$ and $r_2$ but also checks they are disjoint.
+This problem may be tackled by the coalgebraic treatment of effects~\cite{PlotkinPower2008}, but here we adopt a simple workaround:
+Although we do not have an explicit representation of memory to work with, we do have an operation |get| to probe the memory---if $|get r|$ returns $v$, we know memory cell $r$ currently stores value $v$.
+Hence if $\sguard{\rcl{v}}$ is a program traversing linked list $v$ and returns the set of references to the nodes of the list, then we can interpret $\effect{t}{\set{|get|_{\rcl{v}}}}$ in this way: in program $|{r <- sg( _r( v ) ); t}|$, $t$ only reads the references in $r$.
+And as we mentioned in \autoref{subsec:inf}, predicate $\effect{t}{\set{|get|_{r_1}, |put|_{r_2}}}$ implicitly assumes that $r_1$ and $r_2$ are disjoint, so to interpret this predicate, we want $\sguard{r_1 * r_2}$ not only returns the references in $r_1$ and $r_2$ but also checks they are disjoint.
 
-Now we start to formalise this idea.
+Now let us define such programs more formally, which collect references to cells of memory regions and check disjointness.
 Following the notation of separation logic~\cite{Reynolds2002}, we write $\phi = l_1 * l_2 * \cdots * l_n$ to denote a list of separate regions.
-Here $l_i$ is either an expression of type |Ref D| or expression |_r(v)| for some |v| of type |ListPtr D|.
-A separation guard $\sguard{\phi}$ is a computation of type $\mathbf{F}|Unit|$:
+Here $l_i$ is either an expression of type |Ref D| or expression $\rcl{v}$ for some $v$ of type |ListPtr D|.
+We add a new kind of term $\sguard{\phi}$ in the language, which we call \emph{separation guards}.
+It has type $\mathbf{F}|MemSnap|$, where type |MemSnap| abbreviates
+\[|FinMap (Ref (a ** ListPtr a)) (Set (Ref (a ** ListPtr a)))|\]
+Thus |x : MemSnap| is finite map from references to sets of references.
+The semantics of $\sguard{\phi}$ is the computation denoted by the following program
 \begin{code}
-  sg(phi) = sepChk phi eset
+  sem(sg(phi)) = sepChk phi eset eset
 
-  sepChk [] x = return x
-  sepChk (v * phi) x = if l `elem` x then fail else sepChk phi (x union l)
-  sepChk (_r(v) * phi) x = {x' <- chkList v x; sepChk phi x'}
-  
-  chkList Nil x = return x
-  chkList (Ptr p) x = if  p `elem` x
-                          then {fail; return x}
-                          else {(_, n) <- get p; chkList n (x union p)}
+  sepChk [] x rcs = return rcs
+  sepChk (v * phi) x rcs = if l `elem` x then fail else sepChk phi (x union l) rcs
+  sepChk (_r(v) * phi) x rcs = {  x' <- tvsList v;
+                                  if x' intersect x /= eset
+                                     then fail
+                                     else sepChk phi (x' union x) (rcs union { v {-"\mapsto"-} x'})}
+
+  tvsList Nil = return eset
+  tvsList (Ptr r) =  {(a, n) <- get p; rs <- tvsList n; return (r union rs)}
 \end{code}
-For any effect set $\epsilon$, let $R_\epsilon = \set{r \mid |put|_l \in \epsilon} \cup \set{\rcl{p} \mid |get|_\rcl{p} \in \epsilon}$.
-Then we take $\phi_\epsilon$ be an arbitrary $*$-sequence of all the elements of |R|.
-We define the semantics of judgement $\Gamma \vdash \effect{t}{\epsilon}$ to be the set of $\gamma \in \sembrk{\Gamma}$ such that $\sembrk{|{sg(phieps); t}|}_\gamma$ has an element $T$ satisfying:
+Thus $\sguard{\phi}$ traverses each region $r \in \phi$ one by one and checks their cells are disjoint, otherwise it calls |fail|.
+When it terminates, it returns a finite map $rcs$ mapping every region $r$ in $\phi$ to the set of its cells, which can be thought as a snapshot of the current memory.
+
+By probing the memory with separation guards, we can define the semantics of effect predicates now.
+For any effect set $\epsilon$, let $R_\epsilon = \set{l \mid |put|_l \in \epsilon} \cup \set{\rcl{p} \mid |get|_\rcl{p} \in \epsilon}$.
+Then take $\phi_\epsilon$ to be an arbitrary $*$-sequence of all the elements of |R|.
+We define the semantics of judgement $\Gamma \vdash \effect{t}{\epsilon}$ to be the set of $\gamma \in \sembrk{\Gamma}$ such that $\sembrk{|{sg(phieps); t}|}_\gamma$ has an element $T$, which is a tree satisfying:
 \begin{itemize}
-  \item there is some $T_1 \in \sembrk{|sg(phieps)|}_\gamma$ and a family $\set{T_x \in \mathbf{UF}\sembrk{A}}$ for any $x \subseteq \sembrk{|Ref (a, |ListPtr a|)|}$ such that $T$ is equal to the tree obtained by replacing every leaf node of $T_1$ whose return value is $x$ with the tree $T_x$.
-  \item and for any $x$, the tree $T_x$ is finite and every operation in $T_x$ is either: (a) some $|op v|$ for some $|op| \in \epsilon$, (b) $|get r|$ (or $|put (r,u)|$ for some $u$) and $|get|_v \in \epsilon$ (or $|put|_v \in \epsilon$) and $\sembrk{v}_\gamma = r$, and (c) $|get r|$ for $r \in x$.
+  \item there is some $T_1 \in \sembrk{|sg(phieps)|}_\gamma$ and for any leaf node of $T_1$ label with |return x|, there is a computation tree $T_x$, such that $T$ is equal to the tree obtained by replacing every leaf node |return x| of $T_1$ with corresponding $T_x$;
+  \item every $T_x$ is well-founded and every operation in $T_x$ is either: (i) $|op v|$ for some $|op| \in \epsilon$, (ii) $|get v|$ for some $|get|_l \in \epsilon$ and $|v| = \sembrk{l}_\gamma$, (iii) $|put (v,d)|$ for some $|put|_l \in \phi$ and $|v| = \sembrk{l}_\gamma$, (iv) |get v| for some $|get|_\rcl{r}$ and $|v| \in x(\sembrk{r}_\gamma)$, and (v) |put (v,d)| for some $|put|_\rcl{r}$ and $|v| \in x(\sembrk{r}_\gamma)$.
 \end{itemize}
 
+\begin{theorem}[Soundness] If $\judgeThree{\Gamma}{\psi_1, \ldots, \psi_n}{\phi}$ is derivable from the rules in \autoref{subsec:inf}, then
+  \[\bigcap_{1 \leq i \leq n} \sembrk{\Gamma \vdash \psi_i} \subseteq \sembrk{\Gamma \vdash \phi}\]
+\end{theorem}
 
 \chapter{Program Equivalences}\label{sec:eq}
 \Zhixuan{Revise the introductory paragraph because separation guards are also necessary for defining the semantics of effect predicates.}
