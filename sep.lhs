@@ -7,6 +7,7 @@
 \documentclass{sokendai_thesis}
 
 %
+
 \usepackage[sort]{natbib}
 \usepackage{graphicx}
 \usepackage{xcolor}
@@ -18,6 +19,7 @@
 \usepackage{mathtools}
 \DeclarePairedDelimiter\set\{\}
 \DeclarePairedDelimiter\sguard[]
+\DeclarePairedDelimiter\sguardP[{]'}
 \DeclarePairedDelimiter\sembrk\llbracket\rrbracket
 
 \usepackage{mathpartir}
@@ -32,6 +34,10 @@
 \newcommand{\Zhixuan}[2][blue]{{\color{#1}\{Zhixuan: #2\}}}
 %\newcommand{\Zhixuan}[2][blue]{}
 \newcommand{\hide}[2][blue]{}
+
+\def\sectionautorefname{Section}
+\def\chapterautorefname{Chapter}
+\def\subsectionautorefname{Section}
 
 \newcommand{\judgeThree}[3]{#1 {\color{blue}\;||\;} #2 {\color{blue}\;\vdash\;} #3}
 \newcommand{\judgeOneDef}[1]{\judgeThree{\Gamma}{\Psi}{#1}}
@@ -97,12 +103,17 @@
 %format putD = "\mathit{put}_D"
 
 %format phi = "\phi"
+%format eps = "\epsilon"
+%format phieps = "\phi_\epsilon"
 %format union = "\cup"
+%format intersect = "\cap"
 %format eset = "\emptyset"
 %format sg(x) = "\sguard{" x "}"
+%format sgP(x) = "\sguardP{" x "}"
+%format sem(x) = "\sembrk{" x "}"
 %format _r(x) = "\rcl{" x "}"
-%format _F(x) = "\mathbf{F}" x
-%format _U(x) = "\mathbf{U}" x
+%format _F = "\mathbf{F}"
+%format _U = "\mathbf{U}"
 %format foldrlsw = "\mathit{foldrl}_{\mathit{sw}}"
 %format _eqa = "\eqA"
 %format _dots = "\ldots"
@@ -237,7 +248,7 @@ There is always a balance between expressiveness and complexity.
 Despite its simplicity and wide applicability, tracking memory usage by \emph{static} regions is not always effective for equational reasoning about some pointer-manipulating programs, especially those manipulating recursive data structures.
 It is often the case that we want to prove operations on one node of a data structure is irrelevant to operations on the rest of the structure; thus a static region system requires that we annotate the node in a region different from that of the rest of the data structure.
 If this happens to every node (e.g.\ in a recursive function), each node of the data structure needs to have its own region, and thus the abstraction provided by regions collapses: regions should abstract disjoint memory cells, not memory cells themselves.
-In Section~\ref{sec:prob}, we show a concrete example of equational reasoning about a tree traversal program and why a static region system does not work.
+In \autoref{sec:prob}, we show a concrete example of equational reasoning about a tree traversal program and why a static region system does not work.
 
 
 %A notable example is the Schorr-Waite traversal algorithm~\cite{Schorr1967}, which traverses a pointer-based binary tree using only constant space by reusing the memory cells of the tree itself to control the recursion.
@@ -256,13 +267,13 @@ The cells linked from $l$ form a region $\rcl{l}$ but it is only dynamically det
 
 We also introduce a complementary construct called \emph{separation guards}, which are effectful programs checking some pointers or their reachable closures are disjoint, otherwise stopping the execution of the program.
 For example,
-\[l : \mathit{ListPtr}\;a,\ l_2 : \mathit{Ref}\; (a,\,\mathit{ListPtr} \; a) \vdash \sguard{\rcl{l} * l_2} : \mathbf{1}\]
+\[l : \mathit{ListPtr}\;a,\ l_2 : \mathit{Ref}\; (a \times \mathit{ListPtr} \; a) \vdash \sguard{\rcl{l} * l_2} : \mathbf{1}\]
 can be understood as a program checking the cell $l_2$ is not any node of linked list $l$.
 With separation guards and our effect system, we can formulate some program equations beyond the expressiveness of previous region systems.
 For example, given judgement~(\ref{equ:tvs}), then
 \[ \sguard{\rcl{l} * l_2};\mathit{put} \; l_2 \; v; t\; l \quad = \quad \sguard{\rcl{l} * l_2}; t\; l; \mathit{put} \; l_2 \; v  \]
 says that if cell $l_2$ is not a node of linked list $l$, then modification to $l_2$ can be swapped with $t\;l$, which only accesses list $l$.
-In Section~\ref{sec:case}, we demonstrate using these transformations, we can equationally prove the correctness of the Schorr-Waite traversal algorithm (on binary trees)~\cite{Schorr1967} quite straightforwardly.
+In \autoref{sec:case}, we demonstrate using these transformations, we can equationally prove the correctness of the Schorr-Waite traversal algorithm (on binary trees)~\cite{Schorr1967} quite straightforwardly.
 
 \Zhixuan{Here will be a paragraph summarising contributions and the paper structure.}
 
@@ -278,16 +289,16 @@ From this attempt, we can see the limitation of static region systems: we want t
 The straightforward implementation of folding (from the tail side) a linked list is simply
 \Zhixuan{name}
 \begin{code}
-foldrl : (A -> B -> B) -> B -> ListPtr A -> _F(B)
+foldrl : (A -> B -> B) -> B -> ListPtr A -> _F B
 foldrl f e v =  case v of 
                   Nil    -> return e
                   Ptr r  -> {  (a, n) <- get r; b <- foldrl f e n;
                                return (f a b) }
 \end{code}
-where |_F(B)| is the type of computations of |B| values.
+where |_F B| is the type of computations of |B| values.
 The program is recursively defined but not tail-recursive, therefore a compiler is likely to use a stack to implement the recursion.
 At runtime, the stack has one frame for each recursive call storing local arguments and variables so that they can be restored later when the recursion returns.
-If we want to minimise the space cost of the stack, we may notice that most local variables are not necessary to be saved in the stack: arguments |f| and |e| are not changed throughout the recursion, and local variables |a|, |n| and |r| can be obtained from |v|. 
+If we want to minimise the space cost of the stack, we may notice that most local variables are not necessary to be saved in the stack: arguments |f| and |e| are not changed throughout the recursion, and local variables |a|, |n| and |r| can be obtained from |v|.
 Hence |v| is the only variable that a stack frame needs to remember to control the recursion.
 Somewhat surprisingly, we can even reduce the space cost further: since |v| is used to restore the state when the recursive call for |n| is finished and the list node |n| happens to have a field storing a |ListPtr| (that is used to store the successor of |n|), we can store |v| in that field instead of an auxiliary stack.
 But where does the original value of that field of |n| go?
@@ -322,7 +333,7 @@ When |v = Ptr r|, we have
 \begin{equation*}
    |fwd f e p v = { (a, n) <- get r; put (r, (a, p)); fwd f e v n }|
 \end{equation*}
-Assuming we have some inductive principle allowing us to apply Equation~\ref{equ:hyp} to |fwd f e v n| since |n| is the tail of list |v| (We will discuss inductive principles later in Section~\ref{sec:sepinf}), we proceed:
+Assuming we have some inductive principle allowing us to apply Equation~\ref{equ:hyp} to |fwd f e v n| since |n| is the tail of list |v| (We will discuss inductive principles later in \autoref{sec:sepinf}), we proceed:
 \begin{center}
 \begin{code}
 fwd f e p v  =  {  (a, n) <- get r; put (r, (a, p));
@@ -370,7 +381,7 @@ Hence if we want to derive Equation~\ref{equ:com} with a region system, we can a
 Unfortunately, this strategy does not quite work for two reasons:
 First, since the argument above for |r| also applies to |n| and all their successors, what we finally need is one region $\epsilon_i$ for every node $r_i$ of a linked list.
 This is unfavourable because the abstraction of regions collapses---we are forced to say that |foldrl f e n| only accesses list |n|'s first node, second node, etc, instead of only one region containing all the nodes of |n|.
-The second problem happens in the type system: Now that the reference type is indexed by regions, the type of the $i$-th cell of a linked list may be upgraded to $|Ref|\ \epsilon_{i}\ (a,\,|ListPtr|_{i+1}\ a)$.
+The second problem happens in the type system: Now that the reference type is indexed by regions, the type of the $i$-th cell of a linked list may be upgraded to $|Ref|\ \epsilon_{i}\ (a \times |ListPtr|_{i+1}\ a)$.
 But this type signature prevents the second field of this cell pointing to anything but its successor, making programs changing the list structure like |foldrlsw| untypable.
 This problem cannot be fixed by simply change the type of the second field to be the type of references to arbitrary region, because we will lose track of the region information necessary for our equational reasoning when reading from that field. \Zhixuan{Clarify more} \Zhixuan{unnecessary for region polymorphism in typing recursive definitions}
 
@@ -389,14 +400,14 @@ Inference rules for effect predicates are introduced.
 \section{Preliminaries: the Language and Logic}
 %\Zhixuan[red]{To write: this section fixes a programming language of algebraic effects and briefly describes an equational logic for it following \cite{Plotkin2008,Pretnar2010}.But we need to distinguish two equalities: $\eqC$ and $=_{\mathit{AE}}$.}
 
-As the basis of discussion, we fix a small programming language with algebraic effects based on Levy's call-by-push-value calculus~\cite{Levy2012call}. 
-For a more complete treatment of such a language, we refer the reader to Plotkin and Pretnar's work~\cite{Plotkin2008}. 
+As the basis of discussion, we fix a small programming language with algebraic effects based on Levy's call-by-push-value calculus~\cite{Levy2012call}.
+For a more complete treatment of such a language, we refer the reader to Plotkin and Pretnar's work~\cite{Plotkin2008}.
 The syntax and typing rules of this language are listed in Figure~(\ref{lang-syn}) and Figure~(\ref{lang-typing}).
 The language has two categories of types: value types, ranged over by |A|, and computation types, ranged over by $\underline{A}$.
 Value types excluding thunk types ($\mathbf{U}\underline{A}$) are called storable types, ranged over by |D|.
 In this language, only storable types can be stored in memory cells.
 Furthermore, we omit general recursively-defined types for simplicity and restrict our treatment to only one particular recursive type: 
-type |ListPtr A| is isomorphic to 
+type |ListPtr A| is isomorphic to
 \[|Unit + Ref (A ** ListPtr A)|\]
 
 \begin{figure}
@@ -504,7 +515,7 @@ The new term is well-formed when
 \begin{mathpar}
 \inferrule{\typing{\Gamma}{t}{\mathbf{F}{A}}}{\typing{\Gamma}{\effect{t}{\cdot}}{\mathbf{form}}}
 \and
-  \inferrule{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}}}{\typing{\Gamma}{\effect{t}{\epsilon, |op|}}{\mathbf{form}}}
+  \inferrule{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}}}{\typing{\Gamma}{\effect{t}{\epsilon, |op|}}{\mathbf{form}}}\;(|op| \not\in \set{|get|,\;|put|})
 \and
   \inferrule{\typing{\Gamma}{\effect{t}{\epsilon}}{\mathbf{form}} \\ \typing{\Gamma}{v}{|Ref D|}}{\typing{\Gamma}{\effect{t}{\epsilon, o_v}}{\mathbf{form}}}\;(o \in \set{|get|,\;|put|})
 \and
@@ -513,7 +524,7 @@ The new term is well-formed when
 Although $\epsilon$ is formally a list of comma-separated operations, we will regard it as a set and thus use set operations like inclusion and minus on it.
 
 \begin{example}
-  Let $\Gamma$ be $\set{l : |Ref D|,\ r : |Ref (D, ListPtr D)|}$, 
+  Let $\Gamma$ be $\set{l : |Ref D|,\ r : |Ref (D ** ListPtr D)|}$, 
   \[\typing{\Gamma}{\effect{|{(a, n) <- get r; put (l, a)}|}{\set{|put|_{l},\ |get|_{\rcl{|(Ptr r)|}}}}}{\mathbf{form}}\]
   is derivable.
 \end{example}
@@ -523,9 +534,15 @@ For example, if $\typing{\Gamma}{t}{|ListPtr D| \rightarrow \mathbf{F}A}$
 \[\judgeThree{\Gamma}{}{\forall (l : |ListPtr D|).\ \effect{|t l|}{\set{|get|_{\rcl{l}}}}}\]
 is well-formed and it expresses that function |t| only reads |l| when it is applied to list |l|.
 
-\Zhixuan[red]{Standardly, we then give a semantics of the logic formula $\effect{t}{\epsilon}$ and prove the inference rules below are sound, but I found it difficult to give a natural semantics. On the other hand, our ultimate goal is using these effect predicates to express some program transformations. So for our purposes, it is safe enough if we can prove the inference rules of effect predicates lead to sound transformations. So let's go without semantics of effect predicates? }
+The intended meaning of effect predicate $\effect{t}{\epsilon}$ is: provided that the regions mentioned in $\epsilon$ are dijoint, the computation $t$ only applies a finite number of operations in $\epsilon$.
+Before giving a formal definition of this semantics, we present the inference rules first in the rest of this section, which may provide more intuition, and then in \autoref{subsec:sem} we give the formal semantics of effect predicates.
 
-\Zhixuan{(Note for myself) An idea for the semantics: $\sembrk{\effect{t}{|get|_{\rcl{l}}}}$ means $\sembrk{|{traverse l; t}|}$ has a tree that ... }
+% \Zhixuan[red]{Standardly, we then give a semantics of the logic formula $\effect{t}{\epsilon}$ and prove the inference rules below are sound, but I found it difficult to give a natural semantics. On the other hand, our ultimate goal is using these effect predicates to express some program transformations. So for our purposes, it is safe enough if we can prove the inference rules of effect predicates lead to sound transformations. So let's go without semantics of effect predicates? }
+% 
+% \Zhixuan{(Note for myself) An idea for the semantics: $\sembrk{\effect{t}{|get|_{\rcl{l}}}}$ means $\sembrk{|{traverse l; t}|}$ has a tree that ... }
+% 
+% \Zhixuan{After a long discussion with Sekiyama-sensei, I finally realised the semantics should be this: $\effect{t}{\set{|get|_{r_1}, \dots, |get|_{r_n}}}$ means UNDER THE PRECONDITION that $r_i$ are disjoint, and then $t$ is equal to some computation whose operations are in that set. More precisely, it means $\sembrk{\sguard{r_i}; t}$ is some computation that ...}
+
 
 %\section{Effect System as Logic Predicates}
 %%\Zhixuan{This section defines the well-formedness and semantics of predicates $\effect{t}{\epsilon}$: $t$ is a (possibly) infinite operation tree consisting only operations in $\epsilon$.}
@@ -574,7 +591,7 @@ is well-formed and it expresses that function |t| only reads |l| when it is appl
 %  &&& \quad \text{otherwise } \exists\; l',\; d,\; k.\  \sembrk{t}(\gamma) = \sembrk{|put (l',d); k|}(\gamma) \\
 %  &&& \quad\wedge \gamma \in \sembrk{\effect{k}{\epsilon[l'/\rcl{v}]}}}
 %\end{align*}
-\section{Inference Rules}
+\section{Inference Rules}\label{subsec:inf}
 An advantage of tracking effects in the equational logic is that we only need to design inference rules for effects-related language constructs---|return|, sequencing and operation application.
 Other language constructs like case-analysis are handled by the equational logic as we will see in the example below.
 %
@@ -693,7 +710,70 @@ An obvious difference of our effect predicates from existing type-and-effect sys
   \end{equation*}
 \end{example}
 
-\chapter{Separation Guards}
+\Zhixuan{An example demonstrating the assumption of disjointness of regions by these rules.}
+
+\section{Semantics}\label{subsec:sem}
+\Zhixuan{And by Thursday, I will write the equivalence section!}
+
+\Zhixuan{And on Friday, I will clean the paper from the beginning}
+
+\Zhixuan{And on Sat and Sun, I will write the related work and conclusion}
+
+Now let us formalise our intuitive semantics of effect predicate $\effect{t}{\epsilon}$: when regions mentioned in $\epsilon$ are disjoint and have finite cells, $t$ is a computation only using the operations contained in $\epsilon$ and $t$ is also finite.
+Recall that the semantics of $t : \mathbf{F}A$ is an equivalence class of trees whose internal nodes are labeled with operation symbols and leaves are labeled with $|return v|$ for some $v \in \sembrk{A}$.
+Trees in $\sembrk{t}$ are equal in the sense that anyone of them can be rewritten to another by the equations of the effect theory~\cite{Bauer2018}.
+Therefore if we can define a denotational semantics $\sembrk{\epsilon}$, presumably to be the set of operations available to $t$, then $\sembrk{\effect{t}{\epsilon}}$ can be defined to mean that $\sembrk{t}$ has some element $T$ whose operations is a subset of $\sembrk{\epsilon}$ and $T$ is a well-founded tree.
+
+However, how to interpret $\epsilon$ in the framework of algebraic effects is not straightforward.
+For $|op|$, $|get|_l$ and $|put|_l$ in $\epsilon$, they can be easily interpreted by corresponding operations |op|, $|get|_{\sembrk{l}}$ and $|put|_{\sembrk{l}}$.
+For $|get|_{\rcl{l}}$ (and $|put|_{\rcl{l}}$), we want to interpret it as a set of operations $\set{|get|_{\sembrk{l}}, |get|_{r_1}, |get|_{r_2}, \dots}$ where ${\sembrk{l}}$ points to $r_1$, $r_1$ points to $r_2$ in the memory, etc.
+However, in the semantics of algebraic effects, there is no explicit representation for the memory so that we do not immediately know what $r_1$, $r_2$, \dots are.
+(For comparison, the semantics of $t$ in other approaches is usually a function $|Mem -> (sem(A), Mem)|$ which has an explicit |Mem|.)
+
+This problem may be tackled by the coalgebraic treatment of effects~\cite{PlotkinPower2008}, but here we adopt a simple workaround:
+Although we do not have an explicit representation of memory to work with, we do have an operation |get| to probe the memory---if $|get r|$ returns $v$, we know memory cell $r$ currently stores value $v$.
+Hence if $\sguard{\rcl{v}}$ is a program traversing linked list $v$ and returns the set of references to the nodes of the list, then we can interpret $\effect{t}{\set{|get|_{\rcl{v}}}}$ in this way: in program $|{r <- sg( _r( v ) ); t}|$, $t$ only reads the references in $r$.
+And as we mentioned in \autoref{subsec:inf}, predicate $\effect{t}{\set{|get|_{r_1}, |put|_{r_2}}}$ implicitly assumes that $r_1$ and $r_2$ are disjoint, so to interpret this predicate, we want $\sguard{r_1 * r_2}$ not only returns the references in $r_1$ and $r_2$ but also checks they are disjoint.
+
+Now let us define such programs more formally, which collect references to cells of memory regions and check disjointness.
+Following the notation of separation logic~\cite{Reynolds2002}, we write $\phi = l_1 * l_2 * \cdots * l_n$ to denote a list of separate regions.
+Here $l_i$ is either an expression of type |Ref D| or expression $\rcl{v}$ for some $v$ of type |ListPtr D|.
+We add a new kind of term $\sguard{\phi}$ in the language, which we call \emph{separation guards}.
+It has type $\mathbf{F}|MemSnap|$, where type |MemSnap| abbreviates
+\[|FinMap (Ref (a ** ListPtr a)) (Set (Ref (a ** ListPtr a)))|\]
+Thus |x : MemSnap| is finite map from references to sets of references.
+The semantics of $\sguard{\phi}$ is the computation denoted by the following program
+\begin{code}
+  sem(sg(phi)) = sepChk phi eset eset
+
+  sepChk [] x rcs = return rcs
+  sepChk (v * phi) x rcs = if l `elem` x then fail else sepChk phi (x union l) rcs
+  sepChk (_r(v) * phi) x rcs = {  x' <- tvsList v;
+                                  if x' intersect x /= eset
+                                     then fail
+                                     else sepChk phi (x' union x) (rcs union { v {-"\mapsto"-} x'})}
+
+  tvsList Nil = return eset
+  tvsList (Ptr r) =  {(a, n) <- get p; rs <- tvsList n; return (r union rs)}
+\end{code}
+Thus $\sguard{\phi}$ traverses each region $r \in \phi$ one by one and checks their cells are disjoint, otherwise it calls |fail|.
+When it terminates, it returns a finite map $rcs$ mapping every region $r$ in $\phi$ to the set of its cells, which can be thought as a snapshot of the current memory.
+
+By probing the memory with separation guards, we can define the semantics of effect predicates now.
+For any effect set $\epsilon$, let $R_\epsilon = \set{l \mid |put|_l \in \epsilon} \cup \set{\rcl{p} \mid |get|_\rcl{p} \in \epsilon}$.
+Then take $\phi_\epsilon$ to be an arbitrary $*$-sequence of all the elements of |R|.
+We define the semantics of judgement $\Gamma \vdash \effect{t}{\epsilon}$ to be the set of $\gamma \in \sembrk{\Gamma}$ such that $\sembrk{|{sg(phieps); t}|}_\gamma$ has an element $T$, which is a tree satisfying:
+\begin{itemize}
+  \item there is some $T_1 \in \sembrk{|sg(phieps)|}_\gamma$ and for any leaf node of $T_1$ label with |return x|, there is a computation tree $T_x$, such that $T$ is equal to the tree obtained by replacing every leaf node |return x| of $T_1$ with corresponding $T_x$;
+  \item every $T_x$ is well-founded and every operation in $T_x$ is either: (i) $|op v|$ for some $|op| \in \epsilon$, (ii) $|get v|$ for some $|get|_l \in \epsilon$ and $|v| = \sembrk{l}_\gamma$, (iii) $|put (v,d)|$ for some $|put|_l \in \phi$ and $|v| = \sembrk{l}_\gamma$, (iv) |get v| for some $|get|_\rcl{r}$ and $|v| \in x(\sembrk{r}_\gamma)$, and (v) |put (v,d)| for some $|put|_\rcl{r}$ and $|v| \in x(\sembrk{r}_\gamma)$.
+\end{itemize}
+
+\begin{theorem}[Soundness] If $\judgeThree{\Gamma}{\psi_1, \ldots, \psi_n}{\phi}$ is derivable from the rules in \autoref{subsec:inf}, then
+  \[\bigcap_{1 \leq i \leq n} \sembrk{\Gamma \vdash \psi_i} \subseteq \sembrk{\Gamma \vdash \phi}\]
+\end{theorem}
+
+\chapter{Program Equivalences}\label{sec:eq}
+\Zhixuan{Revise the introductory paragraph because separation guards are also necessary for defining the semantics of effect predicates.}
 Our effect predicates defined above can be used to show a program only operates on certain memory cells determined by some variables, but this information is useful only when we know the cells that two programs respectively operates on are disjoint.
 Ultimately, disjointness comes from the \ref{law:disj} axiom of |new| saying that references returned by distinct |new| invocations are different.
 But this axiom is too primitive for practical use.
@@ -778,7 +858,7 @@ Commutativity lemma
 \Zhixuan{Proving the above two rules using the inference rules of separation guards and effect predicate.}
 \end{proof}
 
-\chapter{Case Study: Equational Reasoning about Schorr-Waite Traversal}\label{sec:case}
+\section{Verifying |foldrlsw|, resumed}\label{sec:case}
 
 \chapter{Related Work}
 Algebraic effects:~\cite{Plotkin2002}
