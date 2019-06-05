@@ -246,12 +246,12 @@ In Section~\ref{sec:prob}, we show a concrete example of equational reasoning ab
 
 The core of the problem is the assumption that every memory cell statically belongs to one region, but when the logical structure of memory is mutable (e.g.\ when a linked list is split into two lists), we also want regions to be mutable to reflect the structure of the memory (e.g.\ the region of the list is also split into two regions).
 To mitigate this problem, we propose a \emph{mutable region system}.
-In this system, a region is either (i) a single memory cell or (ii) all the cells reachable from a node of a recursive data structure along the points-to relation of cells.
+In this system, a region is either (i) a single memory cell or (ii) all the cells reachable from a node of a recursive data structure along the points-to relation of cells. \Zhixuan{Claim it is a restriction}
 For example, the judgement
 \begin{equation}\label{equ:tvs}
 l : \mathit{ListPtr} \; a \vdash t\; l : \mathbf{1} \bang \set{\mathit{get}_{\rcl{l}}}
 \end{equation}
-asserts the program $t\;l$ only reads the linked list starting from $l$, where the type $\mathit{ListPtr}\;a = \mathit{Nil} \mid \mathit{Ptr}\;(\mathit{Ref}\; (a,\,\mathit{ListPtr} \; a))$ is either $\mathit{Nil}$ marking the end of the list or a reference to a cell storing a payload of type $a$ and a $\mathit{ListPtr}$ to the next node of the list.
+asserts the program $t\;l$ only reads the linked list starting from $l$, where the type $\mathit{ListPtr}\;a = \mathit{Nil} \mid \mathit{Ptr}\;(\mathit{Ref}\; (a,\,\mathit{ListPtr} \; a))$ \Zhixuan{Footnote} is either $\mathit{Nil}$ marking the end of the list or a reference to a cell storing a payload of type $a$ and a $\mathit{ListPtr}$ to the next node of the list.
 The cells linked from $l$ form a region $\rcl{l}$ but it is only dynamically determined, and therefore may consist of different cells if the successor field (of type $\mathit{ListPtr}\;a$) stored in $l$ is modified.
 
 We also introduce a complementary construct called \emph{separation guards}, which are effectful programs checking some pointers or their reachable closures are disjoint, otherwise stopping the execution of the program.
@@ -274,8 +274,9 @@ This optimisation is essentially the Schorr-Waite algorithm~\cite{Schorr1967} ad
 In the following, we start with an attempt to an algebraic proof of the correctness of this optimisation---transforming the optimised implementation to the straightforward one with equational axioms of the programming language and its effect operations.
 From this attempt, we can see the limitation of static region systems: we want the region partitioning to match the logical structure of data in memory, but when the structure is mutable, static region systems do not allow region partitioning to be mutable to reflect the change of the underlying structure.
 
-\section{Motivating Example: Constant-time |foldr| for Linked Lists}
+\section{Motivating Example: Constant-space |foldr| for Linked Lists}
 The straightforward implementation of folding (from the tail side) a linked list is simply
+\Zhixuan{name}
 \begin{code}
 foldrl : (A -> B -> B) -> B -> ListPtr A -> _F(B)
 foldrl f e v =  case v of 
@@ -371,7 +372,7 @@ First, since the argument above for |r| also applies to |n| and all their succes
 This is unfavourable because the abstraction of regions collapses---we are forced to say that |foldrl f e n| only accesses list |n|'s first node, second node, etc, instead of only one region containing all the nodes of |n|.
 The second problem happens in the type system: Now that the reference type is indexed by regions, the type of the $i$-th cell of a linked list may be upgraded to $|Ref|\ \epsilon_{i}\ (a,\,|ListPtr|_{i+1}\ a)$.
 But this type signature prevents the second field of this cell pointing to anything but its successor, making programs changing the list structure like |foldrlsw| untypable.
-This problem cannot be fixed by simply change the type of the second field to be the type of references to arbitrary region, because we will lose track of the region information necessary for our equational reasoning when reading from that field.
+This problem cannot be fixed by simply change the type of the second field to be the type of references to arbitrary region, because we will lose track of the region information necessary for our equational reasoning when reading from that field. \Zhixuan{Clarify more} \Zhixuan{unnecessary for region polymorphism in typing recursive definitions}
 
 The failure of static region systems in this example is due to the fact that a static region system presumes a fixed region partitioning for a program.
 While as we have seen in the example above, in different steps of our reasoning, we may want to partition regions in different ways:
@@ -427,6 +428,7 @@ type |ListPtr A| is isomorphic to
 We assume that the language includes the effect of failure (|fail|), non-divergence ($\Omega$) and \emph{local state}~\cite{Staton2010}.
 Failure has one nullary operation |fail| and no equations.
 Local state has the following three operations:
+\Zhixuan{typo}
 \begin{align*}
   |get|_D &: |Ref D -> (udl(D))| \\
   |put|_D &: |(Ref D) ** D -> (udl(Unit))| \\
@@ -464,7 +466,7 @@ We refer the reader to the papers~\cite{Pretnar2010,Plotkin2008} for a complete 
 Here we only record what is needed in this paper.
 The formulas of this logic are:
 \begin{align*}
-  \phi ::=\  & t_1 \eqC t_2 \mid t_1 \eqA t_2 \mid \forall x : A.\ \phi \mid \forall x : \underline{A}.\ \phi \\
+  \phi ::=\  & t_1 \eqC t_2  \mid \forall x : A.\ \phi \mid \exists x : \underline{A}.\ \phi \\
        \mid\ & \exists x : A.\ \phi \mid \exists x : \underline{A}.\ \phi  \mid \phi_1 \wedge \phi_2 \mid \phi_1 \vee \phi_2 \\
        \mid\ & \neg\phi \mid \phi_1 \rightarrow \phi_2 \mid \top \mid \bot 
 \end{align*}
@@ -624,7 +626,7 @@ Our inference rules are:
   \item rules for $|get|_\rcl{l}$ and $|put|_\rcl{l}$
     \begin{mathpar}
       %\inferrule{  \judgeThree{\Gamma}{\Psi}{\effect{k}{ \epsilon \setminus \set{ |get|_x, |put|_x} }} }{ \judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon[|Nil| / x]}}} \; (|get|_x \in \epsilon \text{ or } |put|_x \in \epsilon)
-      \inferrule{  \judgeThree{\Gamma}{\Psi}{\effect{k}{ \epsilon \setminus \set{ |get|_\rcl{|Nil|}, |put|_\rcl{|Nil|}} }} }{ \judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon}}} \textsc{ R-Nil}
+      \inferrule{  \judgeThree{\Gamma}{\Psi}{\effect{t}{ \epsilon \setminus \set{ |get|_\rcl{|Nil|}, |put|_\rcl{|Nil|}} }} }{ \judgeThree{\Gamma}{\Psi}{\effect{t}{\epsilon}}} \textsc{ R-Nil}
       \and
       \inferrule{  \judgeThree{\Gamma, a, n}{\Psi}{\effect{k}{ \epsilon[l/x] \cup \epsilon[\rcl{n}/x]}} }{ \judgeThree{\Gamma}{\Psi}{\effect{|{(a, n) <- get l; k}|}{\epsilon[\rcl{|(Ptr l)|} / x]}}} \; (|get|_x \in \epsilon) \textsc{ R-GetRc}
       \and
