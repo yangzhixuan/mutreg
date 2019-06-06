@@ -103,6 +103,9 @@
 %format putD = "\mathit{put}_D"
 
 %format phi = "\phi"
+%format phi1 = "\phi_1"
+%format phi2 = "\phi_2"
+%format phi3 = "\phi_3"
 %format eps = "\epsilon"
 %format phieps = "\phi_\epsilon"
 %format union = "\cup"
@@ -112,6 +115,7 @@
 %format sgP(x) = "\sguardP{" x "}"
 %format sem(x) = "\sembrk{" x "}"
 %format _r(x) = "\rcl{" x "}"
+%format rcl(x) = "rcl{" x "}"
 %format _F = "\mathbf{F}"
 %format _U = "\mathbf{U}"
 %format foldrlsw = "\mathit{foldrl}_{\mathit{sw}}"
@@ -319,7 +323,7 @@ The following program implements this idea with an extra function argument to ju
 |foldrlsw| is in fact a special case of the Schorr-Waite traversal algorithm which traverses a graph whose vertices have at most 2 outgoing edges using only 1 bit for each stack frame to control the recursion.
 The Schorr-Waite algorithm can be easily generalised to traverse a graph whose out-degree is bounded by $k$ using $\log k$ bits for each stack frame, and the above program is the case when $k = 1$ and the list is assumed to be not cyclic.
 
-\section{Verifying |foldrlsw|: First Attempt}
+\section{Verifying |foldrlsw|: First Attempt} \label{subsec:ve}
 Let us try to prove the optimisation above is correct, in the sense that |foldrlsw| can be transformed to |foldrl| by a series of applications of equational axioms on programs that we postulate, including those characterising properties of the language constructs like |case| and function application, and those characterising the effectful operations |get| and |put|.
 
 To prove by induction, it is easy to see that we need to prove a strengthened equality:
@@ -766,97 +770,76 @@ We define the semantics of judgement $\Gamma \vdash \effect{t}{\epsilon}$ to be 
   \item every $T_x$ is well-founded and every operation in $T_x$ is either: (i) $|op v|$ for some $|op| \in \epsilon$, (ii) $|get v|$ for some $|get|_l \in \epsilon$ and $|v| = \sembrk{l}_\gamma$, (iii) $|put (v,d)|$ for some $|put|_l \in \phi$ and $|v| = \sembrk{l}_\gamma$, (iv) |get v| for some $|get|_\rcl{r}$ and $|v| \in x(\sembrk{r}_\gamma)$, and (v) |put (v,d)| for some $|put|_\rcl{r}$ and $|v| \in x(\sembrk{r}_\gamma)$.
 \end{itemize}
 
-\begin{theorem}[Soundness] If $\judgeThree{\Gamma}{\psi_1, \ldots, \psi_n}{\phi}$ is derivable from the rules in \autoref{subsec:inf}, then
+\begin{proposition}[Soundness] If $\judgeThree{\Gamma}{\psi_1, \ldots, \psi_n}{\phi}$ is derivable from the rules in \autoref{subsec:inf}, then
   \[\bigcap_{1 \leq i \leq n} \sembrk{\Gamma \vdash \psi_i} \subseteq \sembrk{\Gamma \vdash \phi}\]
-\end{theorem}
+\end{proposition}
 
 \chapter{Program Equivalences}\label{sec:eq}
-\Zhixuan{Revise the introductory paragraph because separation guards are also necessary for defining the semantics of effect predicates.}
-Our effect predicates defined above can be used to show a program only operates on certain memory cells determined by some variables, but this information is useful only when we know the cells that two programs respectively operates on are disjoint.
-Ultimately, disjointness comes from the \ref{law:disj} axiom of |new| saying that references returned by distinct |new| invocations are different.
-But this axiom is too primitive for practical use.
-In this chapter, we introduce \emph{separation guards} for tracking disjointness more easily at a higher level.
+With effect predicates and separation guards, we can formulate the program transformation we wanted in \autoref{subsec:ve}.
+For any effect predicate $\epsilon$, let $R_\epsilon = \set{r \mid |put|_r \in \epsilon \vee |get|_r \in \epsilon }$ be the regions used in $\epsilon$, and $\phi_\epsilon$ be an arbitrary sequence of the elements of $R_\epsilon$ joined by `$*$'.
+For two effect predicates $\epsilon_1$ and $\epsilon_2$, if their operations (excluding $|get|_r$ and $|put|_r$) are pairwise commutative, i.e.\ any $op_1 \in \epsilon_1$ and $op_2 \in \epsilon_2$ that are not $|get|_r$ or $|put|_r$ satisfy
+\[|{x <- op1 u; y <- op2 v; k}| = |{ y <- op2 v; x <- op1 u; k}|\]
+then we have:
+\begin{equation}
+  \inferrule{\judgeOneDef{\effect{t_i}{\epsilon_i}} \quad (i = 1, 2)}{\judgeOneDef{\preEq{\sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}}}{|{x <- t1; y <- t2; k}|}{|{ y <- t2; x <- t1; k}|}}} \tag{Eq-Com} \label{eq:commu}
+\end{equation}
+where $\preEq{c}{a}{b}$ abbreviates $|{c;a}| \eqA |{c;b}|$.
+\begin{proof}
+  \Zhixuan{This should easily follow the semantics of $\effect{t_i}{\epsilon_i}$}.
+\end{proof}
 
-Following the notation of separation logic~\cite{Reynolds2002}, we write $\phi = l_1 * l_2 * \cdots * l_n$ to denote that cells described by $l_i$ are disjoint.
-Here $l_i$ can be either a value of type |Ref D| or |_r(v)| for a value |v| of type |ListPtr D|.
-A separation guard $\sguard{\phi}$ is a computation of type $\mathbf{F}|Unit|$:
-\begin{code}
-  sg(phi) = sepChk phi eset
+\section{Equational Rules for Separation Guards}
 
-  sepChk [] s = return ()
-  sepChk (v * phi) x = if l `elem` x then fail else sepChk phi (x union l)
-  sepChk (_r(v) * phi) x = {x' <- chkList v x; sepChk phi x'}
-  
-  chkList Nil x = return x
-  chkList (Ptr p) x = if  p `elem` x 
-                          then {fail; return ()}
-                          else {(_, n) <- get p; chkList n (x union p)}
-\end{code}
-\Zhixuan[red]{This definition may not be formal enough because we didn't assumed the language has a type |Set| to implement |x|, but we don't necessarily need to implement separation guards in the language, we can treat it as a new language construct and interpret it freely.}
-|sg(phi)| checks cells described by $\phi$ are distinct.
-For a |ListPtr D| element in $\phi$, the terminance of |sg(phi)| also implies this list in memory is finite.
+The consequence of \ref{eq:commu} has separation guards serving as the precondition for the equality, and therefore to finally use this equality in equational reasoning, we need to know when this precondition is satisfied.
+This is accomplished by the following equational rules for separation guards.
 
-Separation guards can be used to assert preconditions of some program equivalences.
-For example, if |t| is a program traversing list |l : ListPtr D|, it is (algebraically) equivalent to |return ()| when |l| is a finite list:
-\[ |sg(_r(l)); t| \quad\eqA\quad |sg(_r(l)); return ()| \]
-The equality holds whenever |l| is finite or not: when |l| is infinite, |sg(_r(l))| diverges or fails.
-In both cases, it is a left-zero of the sequencing operator ``$ \;;\; $'' and thus the equality holds.
+  \begin{mathpar}
+    \inferrule{ }{ \judgeThree{\Gamma}{}{\preEq{|sg(phi)|}{|new t|}{|{l <- new t; sg(phi * l); return l}|}}} \textsc{ Sep-RefIntro}
+    \and
+    \inferrule{\judgeThree{\Gamma}{\Psi, l_1 \neq l_2}{t_1 \eqA t_2}}{ \judgeOneDef{\preEq{\sguard{l_1 * l_2}}{t_1}{t_2}} }\textsc{ Sep-RefElim}
+  \end{mathpar}
+  \textsc{Sep-RefIntro} adds a cell into the separation guards, provided that the cell is newly generated.
+  The validity of this rule comes from \ref{law:disj} saying that the result of |new| is always different previous values.
+  Conversely, \textsc{Sep-RefElim} says that the separation guard $\sguard{l_1 * l_2}$ (for $l_1$ and $l_2$ of type $|Ref D|$) provides an assumption $l_1 \neq l_2$ for further equational reasoning.
 
-\section{Inference Rules}\label{sec:sepinf}
-Although separation guards can be defined as a concrete program as above, we intend them to be used abstractly with the following inference rules.
-Define $\preEq{c}{a}{b}$ to be $(c;a) \eqA (c;b)$.
 \begin{mathpar}
-  \inferrule{ }{\preEq{|sg(phi)|}{|new t|}{|(l <- new t; sg(phi * l); return l)|}}
+  \inferrule{ }{\judgeThree{\Gamma}{}{\sguard{\phi} = \sguard{\phi * \rcl{|Nil|}}}}\textsc{ Sep-RcIntro1}
   \and
-  \inferrule{\judgeThree{\Gamma}{\Psi, l_1 \neq l_2}{t_1 \eqA t_2}}{ \judgeOneDef{\preEq{\sguard{l_1 * l_2}}{t_1}{t_2}} }
-  \and
-  \inferrule{ }{|return Nil| \eqA |(l <- return Nil; sg(_r(l)); return l)|}
-  \and
-  \inferrule{ }{\preEq{\sguard{\rcl{l}}}{|new (Cell a l)|}{|(l' <- new (Cell a l); sg(_r(l')); return l')|}}
-  \and
-  \inferrule{ \texttt{base case} \\ \texttt{inductive case}}{ \judgeOneDef{\preEq{\sguard{\rcl{l} * \phi}}{t_1}{t_2}}} \quad(\textsc{ListInd})
+  \inferrule{ }{ \judgeThree{\Gamma}{}{\preEq{\sguard{\phi * \rcl{p} * l}}{|put (l, p)|}{|{put (l, p); sg(phi * _r((Ptr l)))}|}}}\textsc{ Sep-RcIntro2}
 \end{mathpar}
-where \texttt{base case} is $\judgeTwoDef{\Psi, l \eqA |Nil|}{\preEq{\sguard{\phi}}{t_1}{t_2}}$ and \texttt{inductive case} is
-\begin{gather*}
-\judgeTwoDef{l \eqA |Ptr l'|, \texttt{hyp}}{\preEq{\left(|(Cell _, n) <- get l'; sg(l' * _r(n) * phi)|\right)}{t_1}{t_2}} \\
-  \texttt{hyp} =_{\mathtt{def}} \preEq{\sguard{\rcl{n} * \phi}}{t_1}{t_2}
-\end{gather*}
-$\sguard{\cdot}$ has the following structural properties:
+\textsc{Sep-RcIntro1} and \textsc{Sep-RcIntro2} introduce a reachable closure in the separation guards, and then it can be eliminated by the following inductive principle for linked lists.
 \begin{mathpar}
-\inferrule{}{\sguard{ \phi_1 * \phi_2 } \eqA \sguard{ \phi_2 * \phi_1 }}
-\and
-\inferrule{}{\sguard{ (\phi_1 * \phi_2) * \phi_3} \eqA \sguard{  \phi_1 * (\phi_2 * \phi_3) }}
-\and
-\inferrule{}{\sguard{\top} \eqA |return ()|}
-\and
-\inferrule{}{\sguard{\phi_1 * \phi_2} \eqA (\sguard{\phi_1 * \phi_2}; \sguard{\phi_1})}
-\and
-\inferrule{}{(\sguard{\phi_1}; \sguard{\phi_2}) \eqA (\sguard{\phi_2}; \sguard{\phi_1})}
+  \inferrule{ \judgeTwoDef{\Psi, p \eqA |Nil|}{\preEq{\sguard{\phi}}{t_1}{t_2}} \\ \texttt{InductiveCase}}{ \judgeOneDef{\preEq{\sguard{\rcl{p} * \phi}}{t_1}{t_2}}} \textsc{ ListInd}
 \end{mathpar}
+where $\texttt{InductiveCase}$ is 
+\[
+  \judgeThree{\Gamma, l}{p \eqA |Ptr l|,\ \texttt{hyp}}{\preEq{|{(a, n) <- get l; sg(l * _r(n) * phi)}|}{t_1}{t_2}}
+\]
+and $\texttt{hyp}$ is $\preEq{\sguard{\rcl{n} * \phi}}{t_1}{t_2}$.
+And we have some simple structural rules for separation guards:
+\begin{mathpar}
+  \inferrule{ }{\judgeTwoDef{}{\sguard{ \phi_1 * \phi_2 } \eqA \sguard{ \phi_2 * \phi_1 }}}
+\and
+  \inferrule{ }{\judgeTwoDef{}{\sguard{ (\phi_1 * \phi_2) * \phi_3} \eqA \sguard{  \phi_1 * (\phi_2 * \phi_3) }}}
+\and
+  \inferrule{ }{\judgeThree{}{}{\sguard{\ } \eqA |return ()|}}
+\and
+  \inferrule{ }{\judgeTwoDef{}{\sguard{\phi_1 * \phi_2} \eqA \{\sguard{\phi_1 * \phi_2}; \sguard{\phi_1}\}}}
+\and
+  \inferrule{ }{\judgeTwoDef{}{\{\sguard{\phi_1}; \sguard{\phi_2}\} \eqA \{\sguard{\phi_2}; \sguard{\phi_1}\}}}
+\end{mathpar}
+
+At last, we have the following rule corresponding to the frame rule of separation logic:
+\[
+  \inferrule{\judgeOneDef{\effect{t}{\overline{\phi_1}}} \\ \judgeOneDef{\preEq{\sguard{\phi_1}}{t}{|{x <- t; sg(phi2); return x}|}}}{\judgeOneDef{\preEq{\sguard{\phi_1 * \psi}}{t}{|{x <- t; {-"\sguard{\phi_2 * \psi} "-}; return x}|}}}
+\]
 
 \begin{proposition}
-The inference rules above are sound.
+  The inference rules above are sound with respect to the semantics.
 \end{proposition}
-\begin{proof}
-  \Zhixuan{It'll be a large verifying proof.}
-\end{proof}
 
-\section{Effect-dependent Transformations}
-A frame rule:
-\[
-\inferrule{\judgeOneDef{\effect{t_1}{\overline{\phi_1}}} \\ \judgeOneDef{\preEq{\sguard{\phi_1}}{t_1}{t_2}}}{\judgeOneDef{\preEq{\sguard{\phi_1 * \phi_2}}{t_1}{(t_2;\sguard{\phi_2})}}}
-\]
 
-Commutativity lemma
-\[
-\inferrule{\judgeOneDef{\effect{t_i}{\overline{\phi_i}}} \; (i = 1, 2) }{\judgeOneDef{\preEq{\sguard{\phi_1 * \phi_2}}{(t_1; t_2)}{(t_2; t_1)}}}
-\]
-
-\begin{proof}
-\Zhixuan{Proving the above two rules using the inference rules of separation guards and effect predicate.}
-\end{proof}
-
-\section{Verifying |foldrlsw|, resumed}\label{sec:case}
+\section{Verifying |foldrlsw|, Resumed}\label{sec:case}
 
 \chapter{Related Work}
 Algebraic effects:~\cite{Plotkin2002}
