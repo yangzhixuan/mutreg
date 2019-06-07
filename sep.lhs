@@ -34,6 +34,9 @@
 
 \newcommand{\Zhixuan}[2][blue]{{\color{#1}\{Zhixuan: #2\}}}
 %\newcommand{\Zhixuan}[2][blue]{}
+%\newcommand{\paperOrDissertation}{paper}
+\newcommand{\paperOrDissertation}{dissertation}
+
 \newcommand{\hide}[2][blue]{}
 
 \def\sectionautorefname{Section}
@@ -194,6 +197,11 @@
 \maketitle
 
 \chapter*{Abstract}
+The algebraic treatment of computational effects makes impure imperative programs amenable to equational reasoning, and it can be combined with region systems, or more generally type-and-effect systems, to derive non-trivial program equivalences by tracking effect operations that may be used by a program.
+In this \paperOrDissertation, we propose a novel mutable region system, in which region partitioning is not statically fixed but follows the points-to structure of memory cells.
+Our mutable region system overcomes the limitations of existing static region systems in tracking pointer-manipulating algorithms.
+We demonstrate the usefulness of our system in an example of equational reasoning about the Schorr-Waite traversal algorithm restricted to linked lists.
+
 
 \chapter*{Acknowledgement}
 The first person I'd want to thank is Josh Ko who guided and trained me in the programming language world and convinced me of the beauty and power of rigorous reasoning.
@@ -225,30 +233,6 @@ I'm grateful for all the happiness and sorrow I had in Japan.
 
 
 \chapter{Introduction}
-\hide{Bullets:
-\begin{enumerate}
-  \item Algebraic effects provide a uniform way to model computational effects and the defining equational theories of algebraic effects are natural tools to reason about programs using algebraic effects---Plotkin and Pretnar's logic.
-  Furthermore, some equational theories are showed to be complete, including the one of local state.
-
-  \item Although being complete, doing equational reasoning with only basic equational axioms may be unscalable.
-  For example, it is unpractical if we must always expand the definitions of two programs $f$ and $g$ to the level of basic operations to prove their algebraic properties such as commutativity $f; g = g;f$.
-
-  \item A widely used solution is to track possible operations in a program with an \emph{effect system}.
-    Exploiting the algebraic properties of operations performed by a program, many program transformation can be validated~\cite{Kammar2012,Kammar2014thesis}.
-    For example, $f$ and $g$ commute if every operation possibly performed by $f$ commutes with every operation in $g$.
-
-  \item However, for the effect of local state, existing region-based effect systems fail to precisely track which regions may be accessed by a program when a cell storing a reference value may point to---store references of---different regions at different stages of execution.
-    This problem emerges in the equational reasoning about the Schorr-Waite traversal algorithm which traverses a pointer-based binary tree with only constant space by reusing the memory cells of the tree to control the recursion.
-    During the traversal, the children pointers of a node of the tree may be modified to store references in different regions at different stages of execution.
-    However, when those cells are read, existing region systems lose track of which region the stored reference precisely is in, disabling program transformations that we would like to use.
-
-  \item To address this problem, we propose an alternative way to track which memory cells may be accessed by a program: instead of checking that a program only accesses a statically determined region, we check a program only accesses all cells reachable from a given pointer, which intuitively form a region but is not statically determined and whose cells may be different if the points-to structure of memory cells are changed at runtime.
-
-    We also introduce a complementary construct of \emph{separation guard}, which is an operation checking some pointers or their reachable closures are disjoint, otherwise the guard fails and stops the execution of the program.
-    With separation guard and our effect system, we can formulate some transformations of pointer-manipulating programs beyond the expressiveness of previous region systems.
-    Using these transformations, we can equationally prove the correctness of a constant-space linked list folding algorithm, which is a special case of the Schorr-Waite traversal algorithm, quite straightforwardly.
-\end{enumerate}
-}
 
 Plotkin and Power's algebraic effects~\cite{Plotkin2002,Plotkin2004} and their handlers~\cite{Plotkin2013,Pretnar2010} provide a uniform foundation for a wide range of computational effects by defining an effect as an algebraic theory---a set of operations and equational axioms on them.
 The approach has proved to be successful because of its composability of effects and clear separation between syntax and semantics.
@@ -280,7 +264,7 @@ In \autoref{sec:prob}, we show a concrete example of equational reasoning about 
 The core of the problem is the assumption that every memory cell statically belongs to one region, but when the logical structure of memory is mutable (e.g.\ when a linked list is split into two lists), we also want regions to be mutable to reflect the structure of the memory (e.g.\ the region of the list is also split into two regions).
 To mitigate this problem, we propose a \emph{mutable region system}.
 In this system, a region is either (i) a single memory cell or (ii) all the cells reachable from a node of a recursive data structure along the points-to relation of cells.
-Although this definition is apparently restrictive, we believe it sufficient to demonstrate our ideas in this paper and generalisations to more forms of regions are easy, e.g.\ regions that are the disjoint union of two subregions.
+Although this definition is apparently restrictive, we believe it sufficient to demonstrate our ideas in this \paperOrDissertation and generalisations to more forms of regions are easy, e.g.\ regions that are the disjoint union of two subregions.
 For example, the judgement
 \begin{equation}\label{equ:tvs}
 l : \mathit{ListPtr} \; a \vdash t\; l : \mathbf{1} \bang \set{\mathit{get}_{\rcl{l}}}
@@ -298,7 +282,7 @@ For example, given judgement~(\ref{equ:tvs}), then
 says that if cell $l_2$ is not a node of linked list $l$, then modification to $l_2$ can be swapped with $t\;l$, which only accesses list $l$.
 In \autoref{sec:case}, we demonstrate using these transformations, we can straightforwardly prove the correctness of a constant-space linked list folding algorithm, which is a special case of the Schorr-Waite traversal algorithm.
 
-The remainder of this paper is structured as follows: in \autoref{sec:prob} we show the limitation of static region systems by guiding the reader through an attempt to equationally reason about an interesting constant-space list folding algorithm; in \autoref{sec:reg} we present our solution---a mutable region system, its semantics and inference rules, which are our main technical contribution; in \autoref{sec:eq} we give a series of program equivalences based on our region system and use them to complete our proof attempt in \autoref{sec:prob}; in \autoref{sec:dis} we discuss related work and future directions.
+The remainder of this \paperOrDissertation is structured as follows: in \autoref{sec:prob} we show the limitation of static region systems by guiding the reader through an attempt to equationally reason about an interesting constant-space list folding algorithm; in \autoref{sec:reg} we present our solution---a mutable region system, its semantics and inference rules, which are our main technical contribution; in \autoref{sec:eq} we give a series of program equivalences based on our region system and use them to complete our proof attempt in \autoref{sec:prob}; in \autoref{sec:dis} we discuss related work and future directions.
 
 \chapter{Limitation of Static Region Systems}\label{sec:prob}
 This chapter we show the limitation of static region systems with a practical example of equational reasoning: proving the straightforward recursive implementation of |foldr| for linked lists is semantically equivalent to an optimised implementation using only constant space.
@@ -490,7 +474,7 @@ which is a special case of the axiom schema $\text{B}3_n$ in~\cite{Staton2010} b
 
 We also need an equational logic for reasoning about programs of this language.
 We refer the reader to the papers~\cite{Pretnar2010,Plotkin2008} for a complete treatment of its semantics and inference rules.
-Here we only record what is needed in this paper.
+Here we only record what is needed in this \paperOrDissertation.
 The formulas of this logic are:
 \begin{align*}
   \phi ::=\  & t_1 \eqC t_2  \mid \forall x : A.\ \phi \mid \exists x : \underline{A}.\ \phi \\
@@ -514,7 +498,7 @@ The inference rules of this logic include:
     \[\inferrule{ }{\judgeThree{l_{1,2} : |Ref D|,\ v_{1,2} : D,\ t : \underline{A}}{}|{put (l1, v1); put (l2, v2); t}| \eqA |{put (l2, v2); t}|}\]
   \item algebraicity of effect operations, the inductive principle over computations and the universal property of computation types.
 \end{enumerate}
-In this paper, we will only use the first three kinds of rules.
+In this \paperOrDissertation, we will only use the first three kinds of rules.
 
 %A difference from the logic defined in~\cite{Plotkin2008,Pretnar2010} is that we distinguish equivalences derived only from CBPV rules (written as $\eqC$) and those derived from both CBPV rules and effect theories (written as $\eqA$).
 %This is preferable for our purpose because we do not want to regard |{v <- get l; put l v}| and |return ()| as the same because they invoke different operations.
@@ -922,7 +906,7 @@ It is an interesting question to compare and establish the connection between ou
 
 
 Our work followed \citet{Kammar2012} to use an effect system to validate program transformations.
-Their results are general to algebraic effects while we almost focused on the effect of mutable state, but as discussed in the paper, our mutable region system is more flexible when dealing with mutable data structures.
+Their results are general to algebraic effects while we almost focused on the effect of mutable state, but as discussed in the \paperOrDissertation, our mutable region system is more flexible when dealing with mutable data structures.
 Unlike theirs and most existing region systems, our mutable region system is defined as predicates in an logic for the programming language instead of within the type system for the language.
 The advantage of our choice is that our inference rules only need to deal with language constructs related to effects and we get the ability to handle higher order functions almost for free.
 
@@ -938,9 +922,9 @@ With these tools, we can give an equational proof for the Schorr-Waite algorithm
 
 
 \section{Future work}
-The system described in this paper is very restrictive and needs future development in many aspects:
+The system described in this \paperOrDissertation is very restrictive and needs future development in many aspects:
 \begin{itemize}
-  \item We neglected effect handlers in this paper and it is important to incorporate them into the mutable region system in the future.
+  \item We neglected effect handlers in this \paperOrDissertation and it is important to incorporate them into the mutable region system in the future.
 
   \item It is also very beneficial to generalise our system from local-state to other dynamically creatable effects.
 
