@@ -198,9 +198,18 @@
   The equational theories of algebraic effects are natural tools for reasoning about programs using the effects, and some of the theories are proved to be complete, including the one of local state---the effect of mutable memory cells with dynamic allocation.
   Although being complete, reasoning about large programs with only a small number of equational axioms can sometimes be cumbersome and unscalable, as exposed in a case study of using the theory of local state to equationally reason about the Schorr-Waite traversal algorithm.
   Motivated by the recurring patterns in the case study, this papers proposes a conservative extension to the theory of local state called \emph{separation guards}, which is used to assert the disjointness of memory cells and allows local equational reasoning as in separation logic.
-  
+
+\chapter*{Acknowledgement}
+Thank the world for letting us be.
+
+\vspace{2cm}
+
+\hfill Zhixuan Yang
+
+\hfill Arai, Ichikawa, 2019
+
   \tableofcontents
-  \listoffigures
+  %\listoffigures
 \mainmatter
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -457,7 +466,7 @@ and they satisfy (a) the three equations in (\ref{laws:gp}) and
   |{l <- new v; x <- get r; K} = { x <- get r; l <- new v; K}| \\
   |{l1 <- new v; l2 <- new u; K} = {l2 <- new u; l1 <- new v; K}|
 \end{gather*}
-and (d) the following \emph{separation law}: for any |D|, 
+and (d) the following \emph{separation law}: for any |D|,
 \begin{center}
 \vspace{-1em}
 \begin{code}
@@ -671,7 +680,7 @@ Our inference rules are:
     \end{mathpar}
     Without this rule, a recursive program defined with $\mu$ can only satisfy $\effect{\cdot}{\epsilon}$ if $\Omega \in \epsilon$ (See Scott-induction in Chapter 9 of paper~\cite{Pretnar2010}).
     This rule allows a program that is a structural recursion along some linked list to satisfy predicate $\effect{\cdot}{\epsilon}$ without including $\Omega$ in $\epsilon$, as if it is not a recursive program.
-    \begin{example}
+    \begin{example}\label{ex:foldrl}
       Without this rule, we can only derive $\effect{|foldrl f e l|}{\set{get_\rcl{l}, \Omega}}$ using Scott-induction.
       With this, we can derive
       \begin{equation*}
@@ -715,12 +724,6 @@ An obvious difference of our effect predicates from existing type-and-effect sys
 \Zhixuan{An example demonstrating the assumption of disjointness of regions by these rules.}
 
 \section{Semantics}\label{subsec:sem}
-\Zhixuan{And by Thursday, I will write the equivalence section!}
-
-\Zhixuan{And on Friday, I will clean the paper from the beginning}
-
-\Zhixuan{And on Sat and Sun, I will write the related work and conclusion}
-
 Now let us formalise our intuitive semantics of effect predicate $\effect{t}{\epsilon}$: when regions mentioned in $\epsilon$ are disjoint and have finite cells, $t$ is a computation only using the operations contained in $\epsilon$ and $t$ is also finite.
 Recall that the semantics of $t : \mathbf{F}A$ is an equivalence class of trees whose internal nodes are labeled with operation symbols and leaves are labeled with $|return v|$ for some $v \in \sembrk{A}$.
 Trees in $\sembrk{t}$ are equal in the sense that anyone of them can be rewritten to another by the equations of the effect theory~\cite{Bauer2018}.
@@ -828,6 +831,13 @@ And we have some simple structural rules for separation guards:
 \and
   \inferrule{ }{\judgeTwoDef{}{\{\sguard{\phi_1}; \sguard{\phi_2}\} \eqA \{\sguard{\phi_2}; \sguard{\phi_1}\}}}
 \end{mathpar}
+and the commutativity of separation guards with |get| and |put|:
+\begin{mathpar}
+  \inferrule{ }{\judgeThree{\Gamma}{}{ |{a <- get l; sg(phi); k}| = |{sg(phi); a <- get l; k}|}}
+  \and
+  \inferrule{ }{\judgeThree{\Gamma}{}{ |{put (l, a); sg(l * phi); k}| = |{sg(l * phi); put (l, a); k}|}}
+
+\end{mathpar}
 
 At last, we have the following rule corresponding to the frame rule of separation logic:
 \[
@@ -840,6 +850,57 @@ At last, we have the following rule corresponding to the frame rule of separatio
 
 
 \section{Verifying |foldrlsw|, Resumed}\label{sec:case}
+Now we have enough weapons to complete our equational proof for |foldrlsw| in \autoref{subsec:ve}---effect predicates for proving commutativity of non-interfering computations and an inductive principle \textsc{ListInd} for finite linked list.
+
+First, we change our proof goal \autoref{equ:hyp} to have a precondition that |v| is a finite list:
+\[\forall p.\ \preEq{\sguard{\rcl{|v|}}}{|{ b <- foldrl f e v; bwd f b p v }|}{|fwd f e p v|}\]
+Then we use \textsc{ListInd} to prove it by induction on |v|.
+The base case is still straightforward.
+The inductive case is to prove
+\begin{equation}\label{equ:indgoal}
+\preEq{|{(a, n) <- get r; sg(l * _r(n))}|}{|{ b <- foldrl f e v; bwd f b p v }|}{|fwd f e p v|}
+\end{equation}
+under the assumption that |v = Ptr r| and inductive hypothesis
+\[\forall p.\ \preEq{\sguard{\rcl{|n|}}}{|{ b <- foldrl f e n; bwd f b p n }|}{|fwd f e p n|}\]
+This is shown by equational reasoning:
+\begin{code}
+     {(a, n) <- get r; sg(r * _r(n)); fwd f e p v}
+  = {-"\hint{Expanding $\mathit{fwd}$}"-}
+     {(a, n) <- get r; sg(r * _r(n)); (a, n) <- get r; _dots }
+  = {-"\hint{Commutativity of $\mathit{get}$ and $\sguard{l * \rcl{n}}$}"-}
+     {(a, n) <- get r; (a, n) <- get r; sg(l * _r(n)); _dots }
+  = {-"\hint{Two consecutive $\mathit{get}\;r$}"-}
+     {(a, n) <- get r; sg(r * _r(n)); put (r, (a, p)); fwd f e v n }
+  =  {(a, n) <- get r; put (r, (a, p)); sg(r * _r(n)); fwd f e v n }
+  = {-"\hint{$\sguard{r * \rcl{n}} = \{\sguard{r * \rcl{n}};\;\sguard{\rcl{n}}\}$ }"-}
+     {(a, n) <- get r; put (r, (a, p)); sg(r * _r(n)); sg(_r(n)); fwd f e v n }
+\end{code}
+Now we can apply our inductive hypothesis to |{sg(_r(n)); fwd f e v n}| by instantiating $p = |v|$, and we get: %
+%format ABOVE = "\text{Above program}"
+\begin{code}
+     ABOVE
+  =  {(a, n) <- get r; put (r, (a, p)); sg(r * _r(n)); sg(_r(n)); b <- foldrl f e n; bwd f b p n}
+  = {-"\hint{Expanding $\mathit{bwd}$}"-}
+     {  (a, n) <- get r; put (r, (a, p)); sg(r * _r(n)); b <- foldrl f e n;
+        (a, p) <- get r; put (r, (a, n)); bwd f (f a b) p v}
+\end{code}
+This time we can use~\ref{eq:commu} to show that |foldrl f e n| and |{(a, p) <- get r; put (r, (a, n))}| are commutative.
+It is straightforward to derive
+\[ \judgeThree{r, n}{}{\effect{|{(a, p) <- get r; put (r, (a, n))}|}{\set{|get|_r, |put|_r}}}\]
+and in \autoref{ex:foldrl} we have derived $\judgeThree{f, e, n}{}{\effect{|foldrl f e n|}{\set{|get|_\rcl{n}}}}$, so by~\ref{eq:commu} we can proceed:
+\begin{code}
+     ABOVE
+  =  {  (a, n) <- get r; put (r, (a, p)); sg(r * _r(n)); (a, p) <- get r; put (r, (a, n));
+        b <- foldrl f e n; bwd f (f a b) p v}
+  = {-"\hint{Commutativity of separation guards with $\mathit{get}$ and $\mathit{put}$}"-}
+     {  (a, n) <- get r; put (r, (a, p)); (a, p) <- get r; put (r, (a, n)); 
+        sg(r * _r(n)); b <- foldrl f e n; bwd f (f a b) p v}
+  = {-"\hint{Simplifying $\mathit{get}$ and $\mathit{put}$}"-}
+     {(a, n) <- get r; sg(r * _r(n)); b <- foldrl f e n; bwd f (f a b) p v}
+  = {-"\hint{Contracting $\mathit{foldrl}$ and $\mathit{f\;a\;b}$}"-}
+     {(a, n) <- get r; sg(r * _r(n)); b' <- foldrl f e v; bwd f b' p v}
+\end{code}
+This completes our equational proof for |foldrlsw|.
 
 \chapter{Related Work}
 Algebraic effects:~\cite{Plotkin2002}
@@ -847,6 +908,9 @@ Algebraic effects:~\cite{Plotkin2002}
 Effect systems:~\cite{Lucassen1988,Talpin1992,Marino2009}
 
 \chapter{Conclusion}
+
+
+
 %
 % ---- Bibliography ----
 %
