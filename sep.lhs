@@ -200,7 +200,19 @@
   Motivated by the recurring patterns in the case study, this papers proposes a conservative extension to the theory of local state called \emph{separation guards}, which is used to assert the disjointness of memory cells and allows local equational reasoning as in separation logic.
 
 \chapter*{Acknowledgement}
-Thank the world for letting us be.
+The first person I'd want to thank is Josh Ko who guided and trained me in the programming language world and convinced me of the beauty and power of rigorous reasoning.
+I'd also thank Zirun Zhu for being my best friend in Japan---you are probably the funniest and most heartwarming man I've ever known.
+Without any doubts, I'd also spent a lot of wonderful time and had many inspiring discussions with other fellow students of the lab---Yongzhe Zhang, Chunmiao Li, Liye Guo, Vandang Tran.
+
+I also want to thank Zhenjiang Hu and Ichiro Hasuo for being my supervisors and giving me precious comments on my research.
+Besides, I want to thank Taro Sekiyama and Jeremy Gibbons for discussing my project with me and giving me much encouragement.
+
+During my days in Japan, all these people mentioned above, my parents in China, and my friends all over the world helped me to fight with depression and find a meaning for my life.
+Thank you all, sincerely.
+
+I'm grateful for all the happiness and sorrow I had in Japan.
+
+
 
 \vspace{2cm}
 
@@ -545,14 +557,8 @@ For example, if $\typing{\Gamma}{t}{|ListPtr D| \rightarrow \mathbf{F}A}$
 \[\judgeThree{\Gamma}{}{\forall (l : |ListPtr D|).\ \effect{|t l|}{\set{|get|_{\rcl{l}}}}}\]
 is well-formed and it expresses that function |t| only reads |l| when it is applied to list |l|.
 
-The intended meaning of effect predicate $\effect{t}{\epsilon}$ is: provided that the regions mentioned in $\epsilon$ are dijoint, the computation $t$ only applies a finite number of operations in $\epsilon$.
+The intended meaning of effect predicate $\effect{t}{\epsilon}$ is: provided that the regions mentioned in $\epsilon$ are disjoint, the computation $t$ only applies a finite number of operations in $\epsilon$.
 Before giving a formal definition of this semantics, we present the inference rules first in the rest of this section, which may provide more intuition, and then in \autoref{subsec:sem} we give the formal semantics of effect predicates.
-
-% \Zhixuan[red]{Standardly, we then give a semantics of the logic formula $\effect{t}{\epsilon}$ and prove the inference rules below are sound, but I found it difficult to give a natural semantics. On the other hand, our ultimate goal is using these effect predicates to express some program transformations. So for our purposes, it is safe enough if we can prove the inference rules of effect predicates lead to sound transformations. So let's go without semantics of effect predicates? }
-% 
-% \Zhixuan{(Note for myself) An idea for the semantics: $\sembrk{\effect{t}{|get|_{\rcl{l}}}}$ means $\sembrk{|{traverse l; t}|}$ has a tree that ... }
-% 
-% \Zhixuan{After a long discussion with Sekiyama-sensei, I finally realised the semantics should be this: $\effect{t}{\set{|get|_{r_1}, \dots, |get|_{r_n}}}$ means UNDER THE PRECONDITION that $r_i$ are disjoint, and then $t$ is equal to some computation whose operations are in that set. More precisely, it means $\sembrk{\sguard{r_i}; t}$ is some computation that ...}
 
 
 %\section{Effect System as Logic Predicates}
@@ -907,9 +913,29 @@ Algebraic effects:~\cite{Plotkin2002}
 
 Effect systems:~\cite{Lucassen1988,Talpin1992,Marino2009}
 
-\chapter{Conclusion}
+\chapter{Conclusion and Future Work}
+Our work started from an attempt to prove the correctness of the Schorr-Waite algorithm by equational reasoning, and as in many previous research works, we observed that the key is to prove two computations do not interfere and thus can be executed in any order.
+From the aspect of algebraic effects, non-interference means that these two computations use commutative effect operations, so the problem is reduced to track operations used by a computation, which is usually done with type-and-effect systems.
+However, existing static-region-based effect systems are inadequate for the Schorr-Waite algorithm because the mutable nature of the algorithms demands different region partitioning at different stages.
 
+To address this problem, we proposed a mutable region system in which regions are determined by the points-to structure of memory cells, so that regions partitioning naturally follows when the points-to structure in memory is modified.
+Our system is formalised as effect predicates and separation guards.
+Semantics and sound inference rules for them are given and they allow us to formulate and prove statements like: this program only reads the cell linked from pointer $p$, and the linked lists from $p_1$ and $p_2$ are disjoint.
+With these tools, we can give an equational proof for the Schorr-Waite algorithm restricted to linked lists, which we think is intuitive and elegant.
 
+The system described in this paper is very restrictive and needs future development in many aspects:
+\begin{itemize}
+  \item We neglected effect handlers in this paper and it is important to incorporate them into the mutable region system in the future.
+
+  \item It is also very beneficial to generalise our system from local-state to other dynamically creatable effects.
+
+  \item Although we presented our system with only linked lists, it should be able to be generalised to arbitrary tree-like data structures easily.
+    However, how to deal with graphs in memory seems much more difficult.
+    To prove the correctness of the Schorr-Waite algorithm on graphs using the method in \autoref{sec:case}, we need to formulate a statement that |traverse g| only reads the nodes reachable from node |g| and not marked visited.
+    Therefore the possible effect operations used by |traverse g| not only depends on the points-to structure of memory cells but also some other mutable state (keeping track of which nodes are visited), so an important question is how to upgrade effect predicates to be more expressive to describe the possible effects used by programs like this.
+    If we aim at generality, it seems that eventually we need some expressive programming language to describe effect usage of programs precisely.
+
+\end{itemize}
 
 %
 % ---- Bibliography ----
