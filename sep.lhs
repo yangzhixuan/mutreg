@@ -207,9 +207,11 @@ We demonstrate the usefulness of our system in an example of equational reasonin
 The first person I'd want to thank is Josh Ko who guided and trained me in the programming language world and convinced me of the beauty and power of rigorous reasoning.
 I'd also thank Zirun Zhu for being my best friend in Japan---you are probably the funniest and most heartwarming man I ever knew.
 Without any doubts, I've spent a lot of wonderful time and had many inspiring discussions with other fellow students and interns of the lab---Yongzhe Zhang, Chunmiao Li, Liye Guo, Vandang Tran, Jo\~ao Pereira.
+And a special thank you goes to Ms Yoshiko Asano, secretary of the lab, who carefully did a lot of paperwork for me and gently helped me---who can't speak a single sentence of Japanese even after living here for two years---to get treatment in hospital when I'm ill.
 
 I also want to thank my supervisors Zhenjiang Hu and Ichiro Hasuo for investing time and funding on my project and giving precious comments on my research.
 Besides, I want to thank Taro Sekiyama and Jeremy Gibbons for discussing my project with me and giving me much encouragement.
+Other evaluation committee members for my thesis, Makoto Tatsuda, Kanae Tsushima and Hiroyuki Kato, also gave me valuable feedback.
 
 During my days in Japan, all these people mentioned above, my parents in China, and my friends scattered over cities and countries helped me to fight with depression and find a meaning for my life.
 Thank you all, sincerely.
@@ -217,7 +219,7 @@ Thank you all, sincerely.
 I'm grateful for all the happiness and sorrow I had in Japan.
 
 
-\vspace{2cm}
+\vspace{1cm}
 
 \hfill Zhixuan Yang
 
