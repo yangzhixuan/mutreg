@@ -23,6 +23,9 @@
 \DeclarePairedDelimiter\sguardP[{]'}
 \DeclarePairedDelimiter\sembrk\llbracket\rrbracket
 
+\theoremstyle{remark}
+\newtheorem*{proofsketch}{Proof ideas}
+
 \usepackage{mathpartir}
 
 \newcommand{\bang}{\,\mathop{!}\,}
@@ -32,10 +35,10 @@
 % to display URLs in blue roman font according to Springer's eBook style:
 \renewcommand\UrlFont{\color{blue}\rmfamily}
 
-\newcommand{\Zhixuan}[2][blue]{{\color{#1}\{Zhixuan: #2\}}}
-%\newcommand{\Zhixuan}[2][blue]{}
-%\newcommand{\paperOrDissertation}{paper}
-\newcommand{\paperOrDissertation}{dissertation}
+%\newcommand{\Zhixuan}[2][blue]{{\color{#1}\{Zhixuan: #2\}}}
+\newcommand{\Zhixuan}[2][blue]{}
+%\newcommand{\paperOrDissertation}{paper }
+\newcommand{\paperOrDissertation}{dissertation }
 
 \newcommand{\hide}[2][blue]{}
 
@@ -196,6 +199,16 @@
 \frontmatter
 \maketitle
 
+%\section*{Todo}
+%\Zhixuan[red]{Todo:
+%\begin{itemize}
+%  \item proofs
+%  \item polishing
+%  \item predicate |new|
+%  \item soundness of frame rule
+%\end{itemize}
+%}
+
 \chapter*{Abstract}
 The algebraic treatment of computational effects makes impure imperative programs amenable to equational reasoning, and it can be combined with region systems, or more generally type-and-effect systems, to derive non-trivial program equivalences by tracking effect operations that may be used by a program.
 In this \paperOrDissertation, we propose a novel mutable region system, in which region partitioning is not statically fixed but follows the points-to structure of memory cells.
@@ -207,17 +220,18 @@ We demonstrate the usefulness of our system in an example of equational reasonin
 The first person I'd want to thank is Josh Ko who guided and trained me in the programming language world and convinced me of the beauty and power of rigorous reasoning.
 I'd also thank Zirun Zhu for being my best friend in Japan---you are probably the funniest and most heartwarming man I ever knew.
 Without any doubts, I've spent a lot of wonderful time and had many inspiring discussions with other fellow students and interns of the lab---Yongzhe Zhang, Chunmiao Li, Liye Guo, Vandang Tran, Jo\~ao Pereira.
+And a special thank you goes to Ms Yoshiko Asano, secretary of the lab, who carefully did a lot of paperwork for me and gently helped me---who can't speak a single sentence of Japanese even after living here for two years---to get treatment in hospital when I'm ill.
 
 I also want to thank my supervisors Zhenjiang Hu and Ichiro Hasuo for investing time and funding on my project and giving precious comments on my research.
 Besides, I want to thank Taro Sekiyama and Jeremy Gibbons for discussing my project with me and giving me much encouragement.
+Other evaluation committee members for my thesis, Makoto Tatsuda, Kanae Tsushima and Hiroyuki Kato, also gave me valuable feedback.
 
 During my days in Japan, all these people mentioned above, my parents in China, and my friends scattered over cities and countries helped me to fight with depression and find a meaning for my life.
 Thank you all, sincerely.
 
 I'm grateful for all the happiness and sorrow I had in Japan.
 
-
-\vspace{2cm}
+\hfill
 
 \hfill Zhixuan Yang
 
@@ -267,25 +281,25 @@ In this system, a region is either (i) a single memory cell or (ii) all the cell
 Although this definition is apparently restrictive, we believe it sufficient to demonstrate our ideas in this \paperOrDissertation and generalisations to more forms of regions are easy, e.g.\ regions that are the disjoint union of two subregions.
 For example, the judgement
 \begin{equation}\label{equ:tvs}
-l : \mathit{ListPtr} \; a \vdash t\; l : \mathbf{1} \bang \set{\mathit{get}_{\rcl{l}}}
+|l : ListPtr a| \vdash \effect{|t l|}{\set{|get|_\rcl{l}}}
 \end{equation}
-asserts the program $t\;l$ only reads the linked list starting from $l$, where the type $\mathbf{data}\;\mathit{ListPtr}\;a = \mathit{Nil} \mid \mathit{Ptr}\;(\mathit{Ref}\; (a,\,\mathit{ListPtr} \; a))$  \footnote{Here |Nil| and |Ptr| are data constructors. |Nil| has type |ListPtr a| and |Ptr| has type |Ref (a, ListPtr a) -> ListPtr a|.} is either $\mathit{Nil}$ marking the end of the list or a reference to a cell storing a payload of type $a$ and a $\mathit{ListPtr}$ to the next node of the list.
+asserts the program $t\;l$ only reads the linked list starting from $l$, where a value of type $\mathbf{data}\;\mathit{ListPtr}\;a = \mathit{Nil} \mid \mathit{Ptr}\;(\mathit{Ref}\; (a,\,\mathit{ListPtr} \; a))$  \footnote{Here |Nil| and |Ptr| are data constructors. |Nil| has type |ListPtr a| and |Ptr| has type |Ref (a, ListPtr a) -> ListPtr a|.} is either $\mathit{Nil}$ marking the end of the list or a reference to a cell storing a payload of type $a$ and a |ListPtr a| to the next node of the list.
 The cells linked from $l$ form a region $\rcl{l}$ but it is only dynamically determined, and therefore may consist of different cells if the successor field (of type $\mathit{ListPtr}\;a$) stored in $l$ is modified.
 
 We also introduce a complementary construct called \emph{separation guards}, which are effectful programs checking some pointers or their reachable closures are disjoint, otherwise stopping the execution of the program.
-For example,
-\[l : \mathit{ListPtr}\;a,\ l_2 : \mathit{Ref}\; (a \times \mathit{ListPtr} \; a) \vdash \sguard{\rcl{l} * l_2} : \mathbf{1}\]
-can be understood as a program checking the cell $l_2$ is not any node of linked list $l$.
-With separation guards and our effect system, we can formulate some program equations beyond the expressiveness of previous region systems.
+For example, $\sguard{\rcl{l} * l_2}$ is a separation guard checking the cell $l_2$ is not any node of linked list $l$, and it is typed as:
+\[ \typing{l : \mathit{ListPtr}\;a,\ l_2 : \mathit{Ref}\; (a \times \mathit{ListPtr} \; a)}{\sguard{\rcl{l} * l_2}}{\mathbf{F}|Unit|} \]
+where $\mathbf{F}A$ is the type of computations returning |A|-values.
+With separation guards and our effect system, we can formulate some program equalities beyond the expressiveness of previous region systems.
 For example, given judgement~(\ref{equ:tvs}), then
 \[ \sguard{\rcl{l} * l_2};\mathit{put} \; l_2 \; v; t\; l \quad = \quad \sguard{\rcl{l} * l_2}; t\; l; \mathit{put} \; l_2 \; v  \]
 says that if cell $l_2$ is not a node of linked list $l$, then modification to $l_2$ can be swapped with $t\;l$, which only accesses list $l$.
 In \autoref{sec:case}, we demonstrate using these transformations, we can straightforwardly prove the correctness of a constant-space linked list folding algorithm, which is a special case of the Schorr-Waite traversal algorithm.
 
-The remainder of this \paperOrDissertation is structured as follows: in \autoref{sec:prob} we show the limitation of static region systems by guiding the reader through an attempt to equationally reason about an interesting constant-space list folding algorithm; in \autoref{sec:reg} we present our solution---a mutable region system, its semantics and inference rules, which are our main technical contribution; in \autoref{sec:eq} we give a series of program equivalences based on our region system and use them to complete our proof attempt in \autoref{sec:prob}; in \autoref{sec:dis} we discuss related work and future directions.
+The structure and contribution of this \paperOrDissertation is as follows: in \autoref{sec:prob} we show the limitation of static region systems by guiding the reader through an attempt to equationally reason about an interesting constant-space list folding algorithm; in \autoref{sec:reg} we present our solution---a mutable region system, its semantics and inference rules, which are our main technical contribution; in \autoref{sec:eq} we give a series of program equivalences based on our region system and use them to complete our proof attempt in \autoref{sec:prob}; in \autoref{sec:rel} and \autoref{sec:conc} we discuss related work, future directions and conclude.
 
 \chapter{Limitation of Static Region Systems}\label{sec:prob}
-This chapter we show the limitation of static region systems with a practical example of equational reasoning: proving the straightforward recursive implementation of |foldr| for linked lists is semantically equivalent to an optimised implementation using only constant space.
+In this chapter we show the limitation of static region systems with a practical example of equational reasoning: proving the straightforward recursive implementation of |foldr| for linked lists is semantically equivalent to an optimised implementation using only constant space.
 The straightforward implementation is not tail-recursive and thus it uses space linear to the length of the list, whereas the optimised version cleverly eliminate the space cost by reusing the space of the linked list itself to store the information needed to control the recursion and restore the linked list after the process.
 This optimisation is essentially the Schorr-Waite algorithm~\cite{Schorr1967} adapted to linked lists, whose correctness is far from obvious and has been used as a test for many approaches of reasoning about pointer-manipulating programs~\cite{Moller1997,Butler,Bird2001,Reynolds2002}.
 
@@ -309,7 +323,7 @@ If we want to minimise the space cost of the stack, we may notice that most loca
 Hence |v| is the only variable that a stack frame needs to remember to control the recursion.
 Somewhat surprisingly, we can even reduce the space cost further: since |v| is used to restore the state when the recursive call for |n| is finished and the list node |n| happens to have a field storing a |ListPtr| (that is used to store the successor of |n|), we can store |v| in that field instead of an auxiliary stack.
 But where does the original value of that field of |n| go?
-They can be stored in the corresponding field of its next node too.
+It can be stored in the corresponding field of its next node too.
 The following program implements this idea with an extra function argument to juggle with these pointers of successive nodes.
 \begin{code}
   foldrlsw f e v = fwd Nil v
@@ -340,7 +354,7 @@ When |v = Ptr r|, we have
 \begin{equation*}
    |fwd f e p v = { (a, n) <- get r; put (r, (a, p)); fwd f e v n }|
 \end{equation*}
-Assuming we have some inductive principle allowing us to apply Equation~\ref{equ:hyp} to |fwd f e v n| since |n| is the tail of list |v| (We will discuss inductive principles later in \autoref{sec:sepinf}), we proceed:
+Assuming we have some inductive principle allowing us to apply Equation~\ref{equ:hyp} to |fwd f e v n| since |n| is the tail of list |v| (We will discuss inductive principles later in \autoref{subsec:sepinf}), we proceed:
 \begin{center}
 \begin{code}
 fwd f e p v  =  {  (a, n) <- get r; put (r, (a, p));
@@ -387,9 +401,9 @@ Hence if we want to derive Equation~\ref{equ:com} with a region system, we can a
 
 Unfortunately, this strategy does not quite work for two reasons:
 First, since the argument above for |r| also applies to |n| and all their successors, what we finally need is one region $\epsilon_i$ for every node $r_i$ of a linked list.
-This is unfavourable because the abstraction of regions collapses---we are forced to say that |foldrl f e n| only accesses list |n|'s first node, second node, etc, instead of only one region containing all the nodes of |n|.
-The second problem happens in the type system: Now that the reference type is indexed by regions, the type of the $i$-th cell of a linked list may be upgraded to $|Ref|\ \epsilon_{i}\ (a \times |ListPtr|_{i+1}\ a)$.
-But this type signature prevents the second field of this cell pointing to anything but its successor, making programs changing the list structure like |foldrlsw| untypable.
+This is unfavourable because the abstraction of regions collapses---we are forced to say that |foldrl f e n| only accesses list |n|'s first node, second node, etc, instead of that |foldrl f e n| only accesses one region containing all the nodes of |n|.
+The second problem happens in the type system: Now that the reference type is indexed by regions, if the $i$-th node of a linked list is in region $r_i$, the type of the $i$-th node is something like $|Ref|\ r_i\ (a \times |ListPtr|_{i+1}\ a)$.
+But this type signature prevents the second field of this cell from pointing to anything but its successor, making programs changing the list structure like |foldrlsw| untypable.
 This problem cannot be fixed by simply change the type of the second field to be the type of references to arbitrary region, because we will lose track of the region information necessary for our equational reasoning when reading from that field. \Zhixuan{Clarify more} \Zhixuan{unnecessary for region polymorphism in typing recursive definitions}
 
 The failure of static region systems in this example is due to the fact that a static region system presumes a fixed region partitioning for a program.
@@ -423,7 +437,7 @@ type |ListPtr A| is isomorphic to
     &\text{Base types: }  & \sigma ::=\ & |Bool| \mid |Unit| \mid |Void| \mid \ldots \\
     &\text{Value types: } & A,\ B: :=\ & \sigma \mid |ListPtr D| \mid |Ref D| \mid A_1 \times A_2 \mid A_1 + A_2 \mid \mathbf{U} \underline{A}\\
     &\text{Storable types: } &D ::=\ & \sigma \mid |ListPtr D| \mid |Ref D| \mid D_1 \times D_2 \mid D_1 + D_2 \\
-    &\text{Computation types: } &\underline{A},\ \underline{B}::=\ & \mathbf{F} A \mid |A1 -> udl(A2)| \\\\
+    &\text{Computation types: } &\underline{A},\ \underline{B}::=\ & \mathbf{F} A \mid |A -> udl(B)| \\\\
     &\text{Base values: } & c ::=\ & |True| \mid |False| \mid () \mid \ldots \\
     &\text{Value terms: } &v ::=\ & x \mid c \mid |Nil| \mid |Ptr v| \mid (v_1,\,v_2) \mid |inj1|^{A_1 + A_2}\ v \mid |inj2|^{A_1 + A_2}\ v \mid |thunk t|\\
     &\text{Computation terms: } &t ::=\ & |return v| \mid |{x <- t1; t2}| \mid |match v as {(x1, x2) -> t}| \\
@@ -445,17 +459,19 @@ Local state has the following three operations:
   |put|_D &: |Ref D ** D -> _F Unit| \\
   |new|_D &: |D -> _F (Ref D)|
 \end{align*}
-and they satisfy (a) the three equations in (\ref{laws:gp}) and
-\[ |{x <- get r; y <- get r; K}| = |{x <- get r; {-"K[x/y]"-}}| \]
-(b) commutativity of |get| and |put| on different cells, for example,
-\[ |{put (l1, u); put (l2, v); K}| = |{put (l2, v); put (l1, u); K}| \quad (|l1| \neq |l2|) \]
-(c) commutativity laws for |new|, that is, 
-\begin{gather*}
-  |{l <- new v; put (r, u); K} = {put (r, u); l <- new v; K}| \\
-  |{l <- new v; x <- get r; K} = { x <- get r; l <- new v; K}| \\
-  |{l1 <- new v; l2 <- new u; K} = {l2 <- new u; l1 <- new v; K}|
-\end{gather*}
-and (d) the following \emph{separation law}: for any |D|,
+and they satisfy:
+\begin{itemize}
+  \item the three equations in (\ref{laws:gp}) and
+   \[ |{x <- get r; y <- get r; K}| = |{x <- get r; {-"K[x/y]"-}}| \]
+  \item commutativity of |get| and |put| on different cells, for example,
+   \[ |{put (l1, u); put (l2, v); K}| = |{put (l2, v); put (l1, u); K}| \quad (|l1| \neq |l2|) \]
+  \item commutativity laws for |new|, that is,
+    \begin{gather*}
+      |{l <- new v; put (r, u); K} = {put (r, u); l <- new v; K}| \\
+      |{l <- new v; x <- get r; K} = { x <- get r; l <- new v; K}| \\
+      |{l1 <- new v; l2 <- new u; K} = {l2 <- new u; l1 <- new v; K}|
+    \end{gather*}
+  \item and the following \emph{separation law}: for any |D|,
 \begin{center}
 \vspace{-1em}
 \begin{code}
@@ -468,7 +484,7 @@ and (d) the following \emph{separation law}: for any |D|,
 \vspace{-1cm}
 \end{center}
 which is a special case of the axiom schema $\text{B}3_n$ in~\cite{Staton2010} but is sufficient for our purposes.
-\Zhixuan{In the standard treatment, these equations come with a context of free variables like $l_2$ in the last one. Do you find it strange if I omit them?}
+\end{itemize}
 
 \Zhixuan{ Give a brief description of the semantics... }
 
@@ -503,7 +519,7 @@ In this \paperOrDissertation, we will only use the first three kinds of rules.
 %A difference from the logic defined in~\cite{Plotkin2008,Pretnar2010} is that we distinguish equivalences derived only from CBPV rules (written as $\eqC$) and those derived from both CBPV rules and effect theories (written as $\eqA$).
 %This is preferable for our purpose because we do not want to regard |{v <- get l; put l v}| and |return ()| as the same because they invoke different operations.
 
-\section{Effect System as Logic Predicates}
+\section{Effect Predicates}
 Unlike existing type-and-effect systems, our mutable region system is defined as logic predicates on computation terms in the logic.
 Let |op| range over possible effect operations in the language.
 We extend the term of the logic:
@@ -630,9 +646,9 @@ Our inference rules are:
     \[\inferrule{ }{\judgeThree{v : |A|}{ }{ \effect{|op v|}{\set{op}}}} \textsc{ R-Op}\]
     and specially for $|get|_l$ and $|put|_l$ (Formally, they are not operation of the language so these rules are needed)
     \begin{mathpar}
-      \inferrule{ }{\judgeThree{l : |Ref D|}{ }{\effect{|get l|}{\set{|get|_l}}}}
+      \inferrule{ }{\judgeThree{l : |Ref D|}{ }{\effect{|get l|}{\set{|get|_l}}}} \textsc{ R-Get}
       \and
-      \inferrule{ }{\judgeThree{l : |Ref D|,\;a : D}{ }{\effect{|put (l, a)|}{\set{|put|_l}}}}
+      \inferrule{ }{\judgeThree{l : |Ref D|,\;a : D}{ }{\effect{|put (l, a)|}{\set{|put|_l}}}} \textsc{ R-Put}
     \end{mathpar}
   \item rules for $|get|_\rcl{l}$ and $|put|_\rcl{l}$
     \begin{mathpar}
@@ -643,17 +659,17 @@ Our inference rules are:
       \and
       \inferrule{ \judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[l / x]}}}{\judgeThree{\Gamma}{\Psi}{\effect{k}{\epsilon[\rcl{|(Ptr l)|} / x]}}} \; (|put|_x \in \epsilon) \textsc{ R-PutRc}
     \end{mathpar}
-    These rules deserve some explanation: The rule \textsc{R-Nil} means that $|get|_\rcl{|Nil|}$ and $|put|_\rcl{|Nil|}$ cannot be used by the program;
-    the rule \textsc{R-GetRc} means that if a program has the permission to read the list from $l$, it can read the cell $l$ and its permission on $\rcl{(|Ptr l|)}$ is split into the same permission on cell $l$ and the rest of the list (i.e.\ $\rcl{n}$);
+    These rules deserve some explanation: The rule \textsc{R-Nil} means that $|get|_\rcl{|Nil|}$ and $|put|_\rcl{|Nil|}$ cannot be used by the program, and it is in fact a special case of \textsc{R-Sub};
+    the rule \textsc{R-GetRc} means that if a program has the permission to read the list from $l$, it can read the cell $l$ and its permission on $\rcl{(|Ptr l|)}$ is split into the same permission on cell $l$ and the rest of the list (i.e.\ $\rcl{n}$):
     \begin{example}
       By \textsc{R-GetRc}, if $\judgeThree{\Gamma, a, n}{}{\effect{k}{\set{|get|_l, |put|_l, |get|_\rcl{n}, |put|_\rcl{n}}}}$ is derivable, then 
       \[\judgeThree{\Gamma}{}{\effect{|{(a, n) <- get l; k}|}{\set{|get|_\rcl{|(Ptr l)|}, |put|_\rcl{|(Ptr l)|}}}}\]
       is derivable.
     \end{example}
-    the rule \textsc{R-PutRc} says that if a program has the permission to write the list from $l$, then it has the permission to write the cell $l$ itself.
+    And the rule \textsc{R-PutRc} says that if a program has the permission to write the list from $l$, then it has the permission to write the cell $l$ itself.
     This rule seems not very useful, but it reflects the fact that even if a program can write $\rcl{|Ptr l|}$, if it cannot read $l$, its accessible cells are restricted to $l$ only.
 
-  \item Finally, we introduce a rule that may not be valid in more general settings but is safe in our context because it assumes all lists in memory are finite.
+  \item Finally, we introduce a rule \textsc{R-ListRec} that may not be valid in more general settings but is safe in our context because it assumes all lists in memory are finite.
     The rule is, under side condition ${|get|_{\rcl{v}}} \in \epsilon$,
     \begin{mathpar}
       \inferrule{ \judgeThree{\Gamma,\ v}{\Psi, |v = Nil|}{\effect{t}{\epsilon}} \\ 
@@ -735,14 +751,14 @@ The semantics of $\sguard{\phi}$ is the computation denoted by the following pro
   sem(sg(phi)) = sepChk phi eset eset
 
   sepChk [] x rcs = return rcs
-  sepChk (v * phi) x rcs = if l `elem` x then fail else sepChk phi (x union l) rcs
+  sepChk (v * phi) x rcs = if v `elem` x then fail else sepChk phi (x union {v}) rcs
   sepChk (_r(v) * phi) x rcs = {  x' <- tvsList v;
                                   if x' intersect x /= eset
                                      then fail
                                      else sepChk phi (x' union x) (rcs union { v {-"\mapsto"-} x'})}
 
   tvsList Nil = return eset
-  tvsList (Ptr r) =  {(a, n) <- get p; rs <- tvsList n; return (r union rs)}
+  tvsList (Ptr r) =  {(a, n) <- get p; rs <- tvsList n; return ({r} union rs)}
 \end{code}
 Thus $\sguard{\phi}$ traverses each region $r \in \phi$ one by one and checks their cells are disjoint, otherwise it calls |fail|.
 When it terminates, it returns a finite map $rcs$ mapping every region $r$ in $\phi$ to the set of its cells, which can be thought as a snapshot of the current memory.
@@ -759,8 +775,32 @@ We define the semantics of judgement $\Gamma \vdash \effect{t}{\epsilon}$ to be 
 \begin{proposition}[Soundness] If $\judgeThree{\Gamma}{\psi_1, \ldots, \psi_n}{\phi}$ is derivable from the rules in \autoref{subsec:inf}, then
   \[\bigcap_{1 \leq i \leq n} \sembrk{\Gamma \vdash \psi_i} \subseteq \sembrk{\Gamma \vdash \phi}\]
 \end{proposition}
+\hfill
+\begin{proofsketch}
+  \hfill
+  \begin{itemize}
+    \item \textsc{R-Sub} follows from the fact that if $\epsilon \leq \epsilon'$, then $\phi_\epsilon \subseteq \phi_{\epsilon'}$ and thus every |return|-leaf of $\sguard{\phi_\epsilon'}$ provides more available memory resources than $\sguard{\phi_\epsilon}$ for |t| to use.
+    \item \textsc{R-Eq} holds because the definition of $\sembrk{\effect{t}{\epsilon}}$ depends only on $\sembrk{t}$ rather than on $t$, and by the soundness of $t = t'$ we have $\sembrk{t} = \sembrk{t'}$.
+    \item \textsc{R-Pure} is trivial since $\sembrk{|return x|}$ has a tree using no operations.
+    \item \textsc{R-Seq} follows the fact that there is a `canonical' element of $\sembrk{\phi_\epsilon}$ whose set of return nodes is a subset of that of any member of $\sembrk{\phi_\epsilon}$, so that we can use this element to prove $\sembrk{\effect{|{x <- t1; t2}|}{\epsilon}}$.
+    \item \textsc{R-Op}, \textsc{R-Get} and \textsc{R-Put} directly follow the definition of the semantics.
+    \item \textsc{R-Nil} is merely a special case of \textsc{R-Sub}.
+    \item \textsc{R-GetRc} holds because in every |return|-leaf the memory snapshot maps $\sembrk{l}$ to the cell of references reachable from |l|, and thus the first operation |get l| is safe and |k| is safe following the premise.
+    \item \textsc{R-PutRc} holds similarly to \textsc{R-GetRc}.
+    %\item For \textsc{R-GetRc}, let $\epsilon' = \epsilon[\rcl{|(Ptr l)|} / x]$ and $\phi_{\epsilon'}$ be some $*$-sequence of the elements of
+    %  \[\set{l \mid |put|_l \in \epsilon'} \cup \set{\rcl{p} \mid |get|_\rcl{p} \in \epsilon'}\]
+    %  such that $\rcl{|Ptr l|}$ is the first element.
+    %  By the semantics of separation guards,
+    %  \[\sembrk{\sguard{\phi_{\epsilon'}}} = \{ x \leftarrow |tvsList|\;\sembrk{|Ptr l|}; |sepChk|\;\phi'\;x\;\{\sembrk{l} \mapsto x\} \}\]
+    %  and
+    %  \[|tvsList|\;\sembrk{|Ptr l|} = \{(a,\, n) \leftarrow |get|\;\sembrk{l};\, |rs| \leftarrow |tvsList n|;\, |return|\;(\set{r} \cup |rs|)\}\]
+    %  Thus in the memory snapshot in each |return|-leaf of $\sembrk{\sguard{\phi_{\epsilon'}}}$, $\sembrk{l}$ is mapped to a set containing $\sembrk{l}$ and \ldots.
+    \item For \textsc{R-ListRec}, note that our separation guards not only checks regions are disjoint but also checks every list-shape region is well-founded. Thus we can prove by induction at every |return|-leaf of the $\sembrk{\sguard{\phi}}$.
+      The proof for the inductive case shall be similar to the soundness proof for \textsc{R-GetRc}.
+  \end{itemize}
+\end{proofsketch}
 
-\chapter{Program Equivalences}\label{sec:eq}
+\chapter{Program Equivalences for Equational Reasoning}\label{sec:eq}
 With effect predicates and separation guards, we can formulate the program transformation we wanted in \autoref{subsec:ve}.
 For any effect predicate $\epsilon$, let $R_\epsilon = \set{r \mid |put|_r \in \epsilon \vee |get|_r \in \epsilon }$ be the regions used in $\epsilon$, and $\phi_\epsilon$ be an arbitrary sequence of the elements of $R_\epsilon$ joined by `$*$'.
 For two effect predicates $\epsilon_1$ and $\epsilon_2$, if their operations (excluding $|get|_r$ and $|put|_r$) are pairwise commutative, i.e.\ any $op_1 \in \epsilon_1$ and $op_2 \in \epsilon_2$ that are not $|get|_r$ or $|put|_r$ satisfy
@@ -770,23 +810,31 @@ then we have:
   \inferrule{\judgeOneDef{\effect{t_i}{\epsilon_i}} \quad (i = 1, 2)}{\judgeOneDef{\preEq{\sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}}}{|{x <- t1; y <- t2; k}|}{|{ y <- t2; x <- t1; k}|}}} \tag{Eq-Com} \label{eq:commu}
 \end{equation}
 where $\preEq{c}{a}{b}$ abbreviates $|{c;a}| \eqA |{c;b}|$.
-\begin{proof}
-  \Zhixuan{This should easily follow the semantics of $\effect{t_i}{\epsilon_i}$}.
-\end{proof}
+\begin{proofsketch}
+  First we can show that $\sguard{\phi_1 * \phi_2} = \{\sguard{\phi_1 * \phi_2};\;\sguard{\phi_2}\}$.
+  And by $\sembrk{ \effect{t_1}{\epsilon_1} }$, $\sembrk{t_1}$ is a finite tree under $\sembrk{\sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}}}$ and $\sembrk{t_1}$ is commutative with $\sembrk{\sguard{\phi_2}}$.
+  Therefore we can first transform
+  $\{ \sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}};\,|x <- t1; y <- t2; k|\}$ to \[\{ \sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}};\,|x <- t1;| \sguard{\phi_{\epsilon_2}} |;y <- t2; k|\},\]
+  and now in every |return|-leaf of $\sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}}$, both $t_1$ and $t_2$ are finite and each operation of them is commutative so that we can swap their order by swap their operations one by one, and we can get
+\[\{ \sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}};\sguard{\phi_{\epsilon_2}} |;y <- t2;|\,|x <- t1;| k \}\]
+which is equal to
+\[\{ \sguard{\phi_{\epsilon_1} * \phi_{\epsilon_2}};|y <- t2;|\,|x <- t1;| k \}\]
 
-\section{Equational Rules for Separation Guards}
+\end{proofsketch}
+
+\section{Equational Rules for Separation Guards}\label{subsec:sepinf}
 
 The consequence of \ref{eq:commu} has separation guards serving as the precondition for the equality, and therefore to finally use this equality in equational reasoning, we need to know when this precondition is satisfied.
 This is accomplished by the following equational rules for separation guards.
 
-  \begin{mathpar}
-    \inferrule{ }{ \judgeThree{\Gamma}{}{\preEq{|sg(phi)|}{|new t|}{|{l <- new t; sg(phi * l); return l}|}}} \textsc{ Sep-RefIntro}
-    \and
-    \inferrule{\judgeThree{\Gamma}{\Psi, l_1 \neq l_2}{t_1 \eqA t_2}}{ \judgeOneDef{\preEq{\sguard{l_1 * l_2}}{t_1}{t_2}} }\textsc{ Sep-RefElim}
-  \end{mathpar}
-  \textsc{Sep-RefIntro} adds a cell into the separation guards, provided that the cell is newly generated.
-  The validity of this rule comes from \ref{law:disj} saying that the result of |new| is always different previous values.
-  Conversely, \textsc{Sep-RefElim} says that the separation guard $\sguard{l_1 * l_2}$ (for $l_1$ and $l_2$ of type $|Ref D|$) provides an assumption $l_1 \neq l_2$ for further equational reasoning.
+\begin{mathpar}
+  \inferrule{ }{ \judgeThree{\Gamma}{}{\preEq{|sg(phi)|}{|new t|}{|{l <- new t; sg(phi * l); return l}|}}} \textsc{ Sep-RefIntro}
+  \and
+  \inferrule{\judgeThree{\Gamma}{\Psi, l_1 \neq l_2}{t_1 \eqA t_2}}{ \judgeOneDef{\preEq{\sguard{l_1 * l_2}}{t_1}{t_2}} }\textsc{ Sep-RefElim}
+\end{mathpar}
+\textsc{Sep-RefIntro} adds a cell into the separation guards, provided that the cell is newly generated.
+The validity of this rule comes from \ref{law:disj} saying that the result of |new| is always different previous values.
+Conversely, \textsc{Sep-RefElim} says that the separation guard $\sguard{l_1 * l_2}$ (for $l_1$ and $l_2$ of type $|Ref D|$) provides an assumption $l_1 \neq l_2$ for further equational reasoning.
 
 \begin{mathpar}
   \inferrule{ }{\judgeThree{\Gamma}{}{\sguard{\phi} = \sguard{\phi * \rcl{|Nil|}}}}\textsc{ Sep-RcIntro1}
@@ -794,10 +842,11 @@ This is accomplished by the following equational rules for separation guards.
   \inferrule{ }{ \judgeThree{\Gamma}{}{\preEq{\sguard{\phi * \rcl{p} * l}}{|put (l, p)|}{|{put (l, p); sg(phi * _r((Ptr l)))}|}}}\textsc{ Sep-RcIntro2}
 \end{mathpar}
 \textsc{Sep-RcIntro1} and \textsc{Sep-RcIntro2} introduce a reachable closure in the separation guards, and then it can be eliminated by the following inductive principle for linked lists.
+
 \begin{mathpar}
   \inferrule{ \judgeTwoDef{\Psi, p \eqA |Nil|}{\preEq{\sguard{\phi}}{t_1}{t_2}} \\ \texttt{InductiveCase}}{ \judgeOneDef{\preEq{\sguard{\rcl{p} * \phi}}{t_1}{t_2}}} \textsc{ ListInd}
 \end{mathpar}
-where $\texttt{InductiveCase}$ is 
+where $\texttt{InductiveCase}$ is
 \[
   \judgeThree{\Gamma, l}{p \eqA |Ptr l|,\ \texttt{hyp}}{\preEq{|{(a, n) <- get l; sg(l * _r(n) * phi)}|}{t_1}{t_2}}
 \]
@@ -824,12 +873,20 @@ and the commutativity of separation guards with |get| and |put|:
 
 At last, we have the following rule corresponding to the frame rule of separation logic:
 \[
-  \inferrule{\judgeOneDef{\effect{t}{\overline{\phi_1}}} \\ \judgeOneDef{\preEq{\sguard{\phi_1}}{t}{|{x <- t; sg(phi2); return x}|}}}{\judgeOneDef{\preEq{\sguard{\phi_1 * \psi}}{t}{|{x <- t; {-"\sguard{\phi_2 * \psi} "-}; return x}|}}}
+  \inferrule{\judgeOneDef{\effect{t}{\epsilon}} \\ \judgeOneDef{\preEq{\sguard{\phi_\epsilon}}{t}{|{x <- t; sg(phi2); return x}|}}}{\judgeOneDef{\preEq{\sguard{\phi_\epsilon * \psi}}{t}{|{x <- t; {-"\sguard{\phi_2 * \psi} "-}; return x}|}}}
 \]
 
 \begin{proposition}
   The inference rules above are sound with respect to the semantics.
 \end{proposition}
+\begin{proofsketch}
+Since the semantics of separation guards is |get| operations and |fail|, the soundness of most of these inference rules follow the equational laws of |get|, |put|, |new| and |fail|.
+  For example, \textsc{Sep-RefIntro} is a direct consequence of \ref{law:disj} and \textsc{Sep-RefElim} follows the equational law that |fail| is a left-zero of sequential composition.
+
+  \textsc{ListInd} is an exception, which shall be proved by induction on the list |p| at each |return|-leaf of separation guard $\sguard{\rcl{p} * \phi}$.
+  And the frame rule shall be proved by first showing that the cells traversed by $\sguard{\phi_2}$ is a subset of those traversed by $\sguard{\phi_\epsilon}$ and the cells newly allocated by $t$, and thus the cells traversed by $\sguard{\psi}$ are disjoint from those traversed by $\sguard{\phi_2}$.
+
+\end{proofsketch}
 
 
 \section{Verifying |foldrlsw|, Resumed}\label{sec:case}
@@ -886,9 +943,8 @@ and in \autoref{ex:foldrl} we have derived $\judgeThree{f, e, n}{}{\effect{|fold
 This completes our equational proof for |foldrlsw|.
 
 
-\chapter{Discussions}\label{sec:dis}
-
-\section{Related work}
+\chapter{Related Work}\label{sec:rel}
+\section{Verification of the Schorr-Waite algorithm}
 The correctness of the Schorr-Waite algorithm has been proved by different approaches: relational algebra~\cite{Moller1997}, data refinement~\cite{Butler}, separation logic~\cite{Reynolds2002} and equational reasoning~\cite{Bird2001}.
 Among them, Bird's approach is most related to ours.
 The fundamental difference between our work and his is that he worked with a fixed (purely-functional) model of memory, whereas we followed the axiomatic approach for equational reasoning \cite{Gibbons2011} so our reasoning only depends on algebraic axioms of effect operations.
@@ -897,6 +953,7 @@ As we were developing the equational proof for the Schorr-Waite algorithm, we tr
 But we found the proof complicated and many of its steps too low-level if we could only work with primitive operations.
 Thus we turned to use effect systems to prove important steps---commutativity of two non-interfering computations---in a more intuitive way.
 
+\section{Separation Logic}
 Our separation guards are borrowed from separation logic~\cite{Reynolds2002} with extreme restriction on the forms of assertions, but we expect an extended version of our system may use a wider family of assertions as in separation logic.
 Our work is different from separation logic in the way that our goal is to show two programs are observationally equivalent while separation logic shows a program establishes a post-condition described by a logic language.
 The fundamental difference on the proof goal makes these two approaches useful in different settings.
@@ -905,12 +962,15 @@ Another closely related approach is relational separation logic~\cite{Yang2007},
 It is an interesting question to compare and establish the connection between our algebraic-effects-based approach and separation-logic-based approaches in the future, possibly through the connection between monads and predicate transformers established by \citet{Hasuo2015}.
 
 
+\section{Effect Systems}
 Our work followed \citet{Kammar2012} to use an effect system to validate program transformations.
 Their results are general to algebraic effects while we almost focused on the effect of mutable state, but as discussed in the \paperOrDissertation, our mutable region system is more flexible when dealing with mutable data structures.
 Unlike theirs and most existing region systems, our mutable region system is defined as predicates in an logic for the programming language instead of within the type system for the language.
 The advantage of our choice is that our inference rules only need to deal with language constructs related to effects and we get the ability to handle higher order functions almost for free.
 
-\section{Conclusion}
+
+\chapter{Conclusion}\label{sec:conc}
+
 Our work started from an attempt to prove the correctness of the Schorr-Waite algorithm by equational reasoning, and as in many previous research works, we observed that the key is to prove two computations do not interfere and thus can be executed in any order.
 From the aspect of algebraic effects, non-interference means that these two computations use commutative effect operations, so the problem is reduced to track operations used by a computation, which is usually done with type-and-effect systems.
 However, existing static-region-based effect systems are inadequate for the Schorr-Waite algorithm because the mutable nature of the algorithms demands different region partitioning at different stages.
