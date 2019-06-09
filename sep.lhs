@@ -199,7 +199,7 @@
 \chapter*{Abstract}
 The algebraic treatment of computational effects makes impure imperative programs amenable to equational reasoning, and it can be combined with region systems, or more generally type-and-effect systems, to derive non-trivial program equivalences by tracking effect operations that may be used by a program.
 In this \paperOrDissertation, we propose a novel mutable region system, in which region partitioning is not statically fixed but follows the points-to structure of memory cells.
-Our mutable region system overcomes the limitations of existing static region systems in tracking pointer-manipulating algorithms.
+Our mutable region system can track memory usage of pointer-manipulating algorithms more precisely than existing static region systems and thus enables more program equivalences for equational reasoning.
 We demonstrate the usefulness of our system in an example of equational reasoning about the Schorr-Waite traversal algorithm restricted to linked lists.
 
 
